@@ -1,6 +1,6 @@
 # OutFRid 的个人博客
 ---
-![主题照片](https://github.com/OutFRid/OutFRid.github.io/blob/6bfb413dbebd6d4833de3ba9fdaec40cd2facfed/images/index.jpg)
+![主题照片](blob:https://github.com/eef69591-371c-4c68-89b8-57ca7a0ca9ad)
 ---
 
 ## 我的文章
