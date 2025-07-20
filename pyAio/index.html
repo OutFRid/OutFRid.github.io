@@ -21,15 +21,15 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="Python多进程、多线程、多管程浅解">
+  <meta name="description" content="本文简单介绍了Python多进程、多线程、多管程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Python多进程、多线程、多管程浅解">
 <meta property="og:url" content="http://example.com/pyAio/index.html">
 <meta property="og:site_name" content="OutFRid&#39;s Blog">
-<meta property="og:description" content="Python多进程、多线程、多管程浅解">
+<meta property="og:description" content="本文简单介绍了Python多进程、多线程、多管程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-07-13T04:00:47.000Z">
-<meta property="article:modified_time" content="2025-07-13T04:39:10.786Z">
+<meta property="article:modified_time" content="2025-07-20T09:18:57.811Z">
 <meta property="article:author" content="OutFRid">
 <meta property="article:tag" content="-python -multiThread">
 <meta name="twitter:card" content="summary">
@@ -213,10 +213,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2025-07-13 12:00:47 / Modified: 12:39:10" itemprop="dateCreated datePublished" datetime="2025-07-13T12:00:47+08:00">2025-07-13</time>
+              <time title="Created: 2025-07-13 12:00:47" itemprop="dateCreated datePublished" datetime="2025-07-13T12:00:47+08:00">2025-07-13</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2025-07-20 17:18:57" itemprop="dateModified" datetime="2025-07-20T17:18:57+08:00">2025-07-20</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="far fa-folder"></i>
@@ -228,7 +234,7 @@
             </span>
 
           
-            <div class="post-description">Python多进程、多线程、多管程浅解</div>
+            <div class="post-description">本文简单介绍了Python多进程、多线程、多管程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别</div>
 
         </div>
       </header>
@@ -239,7 +245,70 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        
+        <h2 id="多进程"><a href="#多进程" class="headerlink" title="多进程"></a>多进程</h2><p>Python多进程是一种通过操作系统级资源分配实现并发执行的技术，其核心在于利用多个独立的进程并行处理任务。</p>
+<h3 id="功能说明"><a href="#功能说明" class="headerlink" title="功能说明"></a>功能说明</h3><ul>
+<li><p>并行计算</p>
+<p>Python多进程通过 multiprocessing 模块实现真正的并行执行，每个进程拥有独立的内存空间和执行环境，可同时利用多核CPU。</p>
+</li>
+<li><p>资源分配与隔离</p>
+<p>进程是操作系统分配资源的基本单位，每个进程独立运行，互不干扰。进程的动态性体现在其生命周期中，从创建到终止均由系统管理。多进程的隔离性使其在稳定性上优于多线程，尤其适合CPU密集型任务。</p>
+</li>
+<li><p>通信与同步机制</p>
+<ul>
+<li>进程间通信（IPC） ：通过Queue（队列）、Pipe（管道）、Manager（共享内存）等工具实现数据传递。Queue适用于主进程与子进程之间的数据交换，而Manager支持复杂数据结构的共享。</li>
+<li>同步原语：使用Lock、Barrier等同步对象协调多个进程的执行顺序，避免竞争条件。</li>
+</ul>
+</li>
+<li><p>进程池管理</p>
+<p>multiprocessing.Pool 简化了批量任务的并行处理。通过 pool.map() 可以将任务分配给进程池，自动管理进程生命周期。</p>
+</li>
+</ul>
+<h3 id="实现方法"><a href="#实现方法" class="headerlink" title="实现方法"></a>实现方法</h3><ul>
+<li><p>直接创建进程</p>
+<ul>
+<li><p>Process类</p>
+<p>通过multiprocessing.Process创建进程对象，指定target函数和args参数。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> multiprocessing</span><br><span class="line"><span class="keyword">import</span> os</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">worker1</span>():</span><br><span class="line">    <span class="comment"># printing process id</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;ID of process running worker1: &#123;&#125;&quot;</span>.<span class="built_in">format</span>(os.getpid()))</span><br><span class="line"><span class="keyword">def</span> <span class="title function_">worker2</span>():</span><br><span class="line">    <span class="comment"># printing process id</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;ID of process running worker2: &#123;&#125;&quot;</span>.<span class="built_in">format</span>(os.getpid()))</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&quot;__main__&quot;</span>:</span><br><span class="line">    <span class="comment"># printing main program process id</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;ID of main process: &#123;&#125;&quot;</span>.<span class="built_in">format</span>(os.getpid()))</span><br><span class="line"></span><br><span class="line">    <span class="comment"># creating processes</span></span><br><span class="line">    p1 = multiprocessing.Process(target=worker1)</span><br><span class="line">    p2 = multiprocessing.Process(target=worker2)</span><br><span class="line"></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;haven\&#x27;t started yet&#x27;</span>)</span><br><span class="line">    <span class="comment"># starting processes</span></span><br><span class="line">    p1.start()</span><br><span class="line">    p2.start()</span><br><span class="line">    <span class="comment"># process IDs</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;ID of process p1: &#123;&#125;&quot;</span>.<span class="built_in">format</span>(p1.pid))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;ID of process p2: &#123;&#125;&quot;</span>.<span class="built_in">format</span>(p2.pid))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&#x27;started&#x27;</span>)</span><br><span class="line">    <span class="comment"># wait until processes are finished</span></span><br><span class="line">    p1.join()</span><br><span class="line">    p2.join()</span><br><span class="line"></span><br><span class="line">    <span class="comment"># both processes finished</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;Both processes finished execution!&quot;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># check if processes are alive</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;Process p1 is alive: &#123;&#125;&quot;</span>.<span class="built_in">format</span>(p1.is_alive()))</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;Process p2 is alive: &#123;&#125;&quot;</span>.<span class="built_in">format</span>(p2.is_alive()))</span><br><span class="line">    <span class="string">&#x27;&#x27;&#x27;  输出结果  </span></span><br><span class="line"><span class="string">    ID of main process: 29952</span></span><br><span class="line"><span class="string">    haven&#x27;t started yet</span></span><br><span class="line"><span class="string">    ID of process p1: 9956</span></span><br><span class="line"><span class="string">    ID of process p2: 11804</span></span><br><span class="line"><span class="string">    started</span></span><br><span class="line"><span class="string">    ID of process running worker1: 9956</span></span><br><span class="line"><span class="string">    ID of process running worker2: 11804</span></span><br><span class="line"><span class="string">    Both processes finished execution!</span></span><br><span class="line"><span class="string">    Process p1 is alive: False</span></span><br><span class="line"><span class="string">    Process p2 is alive: False</span></span><br><span class="line"><span class="string">    &#x27;&#x27;&#x27;</span></span><br></pre></td></tr></table></figure>
+<p>可以看到p1.start()之后并不直接执行，而是继续执行主进程，直到p1.join()，将主进程阻塞至p1执行完毕</p>
+</li>
+<li><p>守护进程</p>
+<p>通过 daemon&#x3D;True 设置进程为守护进程，主进程退出时自动终止子进程</p>
+<p>借助 Process类 中的代码可以看到不设置 daemon 主程序只管自己结束，然后子程序还在运行</p>
+<p>设置了 daemon 主程序结束了 就全结束了  所以要设置 daemon+join 阻塞主程序，等待子程序运行结束后在运行主程序</p>
+<p>即daemon一般与join配套使用</p>
+</li>
+</ul>
+</li>
+<li><p>继承Process类</p>
+<p>自定义进程类继承multiprocessing.Process，重写run()方法。例如</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> multiprocessing <span class="keyword">import</span> Process</span><br><span class="line"><span class="keyword">class</span> <span class="title class_">MyProcess</span>(<span class="title class_ inherited__">Process</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, name</span>):</span><br><span class="line">        <span class="built_in">super</span>().__init__()</span><br><span class="line">        <span class="variable language_">self</span>.name = name</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">run</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">f&#x27;测试<span class="subst">&#123;self.name&#125;</span>多进程&#x27;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">&#x27;__main__&#x27;</span>:</span><br><span class="line">    p = MyProcess(<span class="string">&#x27;bob&#x27;</span>)</span><br><span class="line">    p.start()</span><br><span class="line"><span class="comment">#输出结果：</span></span><br><span class="line"><span class="comment">#测试bob多进程</span></span><br></pre></td></tr></table></figure>
+<p>记住一定是 run 方法才会被视作 target 方法执行。</p>
+</li>
+</ul>
+<h3 id="注意事项"><a href="#注意事项" class="headerlink" title="注意事项"></a>注意事项</h3><ul>
+<li><p>性能开销</p>
+<ul>
+<li>进程启动成本：每次创建进程需复制内存和资源，开销远高于线程。一般根据服务器配置调整进程数量，避免过度消耗。</li>
+<li>通信开销：进程间通信（如Queue）需额外开销，需权衡效率与复杂度</li>
+</ul>
+</li>
+<li><p>守护进程设置</p>
+<ul>
+<li>Windows系统要求进程代码位于if <strong>name</strong> &#x3D;&#x3D; ‘<strong>main</strong>‘块内，否则可能导致死循环（当然，好的IDE你不写在if <strong>name</strong> &#x3D;&#x3D; ‘<strong>main</strong>‘块内，会自动报错）</li>
+<li>守护进程的 daemon 属性需谨慎设置，避免主进程退出时子进程残留</li>
+</ul>
+</li>
+<li><p>同步与竞争条件</p>
+<ul>
+<li>共享内存风险：直接共享变量（如全局变量）可能导致数据不一致，需使用Lock或RLock同步。另外子进程与父进程不共享内存空间，即子进程获得父进程环境变量的独立副本，子进程对环境的修改不影响父进程，反之亦然</li>
+<li>死锁问题：多进程间的同步逻辑需避免死锁，例如使用Barrier协调多个进程的等待状态</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="多线程"><a href="#多线程" class="headerlink" title="多线程"></a>多线程</h2><hr>
+<h2 id="多管程"><a href="#多管程" class="headerlink" title="多管程"></a>多管程</h2><hr>
+<h2 id="对比分析"><a href="#对比分析" class="headerlink" title="对比分析"></a>对比分析</h2>
     </div>
 
     
@@ -323,6 +392,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">多进程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD%E8%AF%B4%E6%98%8E"><span class="nav-number">1.1.</span> <span class="nav-text">功能说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%B3%95"><span class="nav-number">1.2.</span> <span class="nav-text">实现方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.3.</span> <span class="nav-text">注意事项</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">多线程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E7%AE%A1%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">多管程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">对比分析</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
