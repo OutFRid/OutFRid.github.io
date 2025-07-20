@@ -21,15 +21,15 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="本文简单介绍了Python多进程、多线程、多管程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别">
+  <meta name="description" content="本文简单介绍了Python多进程、多线程、多协程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Python多进程、多线程、多管程浅解">
+<meta property="og:title" content="Python多进程、多线程、多协程浅解">
 <meta property="og:url" content="http://example.com/pyAio/index.html">
 <meta property="og:site_name" content="OutFRid&#39;s Blog">
-<meta property="og:description" content="本文简单介绍了Python多进程、多线程、多管程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别">
+<meta property="og:description" content="本文简单介绍了Python多进程、多线程、多协程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2025-07-13T04:00:47.000Z">
-<meta property="article:modified_time" content="2025-07-20T09:18:57.811Z">
+<meta property="article:modified_time" content="2025-07-20T10:09:06.776Z">
 <meta property="article:author" content="OutFRid">
 <meta property="article:tag" content="-python -multiThread">
 <meta name="twitter:card" content="summary">
@@ -47,7 +47,7 @@
   };
 </script>
 
-  <title>Python多进程、多线程、多管程浅解 | OutFRid's Blog</title>
+  <title>Python多进程、多线程、多协程浅解 | OutFRid's Blog</title>
   
 
 
@@ -204,7 +204,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Python多进程、多线程、多管程浅解
+          Python多进程、多线程、多协程浅解
         </h1>
 
         <div class="post-meta">
@@ -221,7 +221,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2025-07-20 17:18:57" itemprop="dateModified" datetime="2025-07-20T17:18:57+08:00">2025-07-20</time>
+                <time title="Modified: 2025-07-20 18:09:06" itemprop="dateModified" datetime="2025-07-20T18:09:06+08:00">2025-07-20</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -234,7 +234,7 @@
             </span>
 
           
-            <div class="post-description">本文简单介绍了Python多进程、多线程、多管程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别</div>
+            <div class="post-description">本文简单介绍了Python多进程、多线程、多协程的实现方法、函数使用以及注意事项，默认读者已经了解什么是进程和线程，了解进程和线程的区别</div>
 
         </div>
       </header>
@@ -306,9 +306,144 @@
 </li>
 </ul>
 <hr>
-<h2 id="多线程"><a href="#多线程" class="headerlink" title="多线程"></a>多线程</h2><hr>
-<h2 id="多管程"><a href="#多管程" class="headerlink" title="多管程"></a>多管程</h2><hr>
-<h2 id="对比分析"><a href="#对比分析" class="headerlink" title="对比分析"></a>对比分析</h2>
+<h2 id="多线程"><a href="#多线程" class="headerlink" title="多线程"></a>多线程</h2><h3 id="功能覆盖"><a href="#功能覆盖" class="headerlink" title="功能覆盖"></a>功能覆盖</h3><ul>
+<li><p>并发处理 </p>
+<p>多线程可同时执行多个任务，例如文件读写、网络请求等I&#x2F;O密集型操作，避免主线程阻塞，提升程序响应性</p>
+</li>
+<li><p>任务分解与并行执行</p>
+<p>将复杂任务拆分为子任务，通过多线程并行处理，缩短总耗时。例如，爬虫任务中可同时抓取多个网页(网卡也是IO设备)</p>
+</li>
+<li><p>资源共享与通信</p>
+<p>线程间共享进程内存空间，便于数据传递和协作，但需注意同步问题</p>
+</li>
+<li><p>适用场景</p>
+<ul>
+<li>I&#x2F;O密集型任务：如文件读写、网络请求、数据库操作等，线程在等待I&#x2F;O时可切换执行其他任务。</li>
+<li>用户界面优化：GUI应用中，后台任务（如进度计算）可与界面交互，避免卡顿。</li>
+<li>异步任务处理：如定时任务、监控任务等，可通过多线程实现非阻塞执行</li>
+</ul>
+</li>
+</ul>
+<h3 id="实现方法-1"><a href="#实现方法-1" class="headerlink" title="实现方法"></a>实现方法</h3><ul>
+<li><p>基础模块</p>
+<p>Python通过threading模块实现多线程，其核心功能包括：</p>
+<ul>
+<li><p>Thread类 用于创建线程，支持两种方式：</p>
+<ul>
+<li>基于函数：直接指定任务函数</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">def</span> <span class="title function_">task</span>():</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;线程执行中&quot;</span>)</span><br><span class="line">t = threading.Thread(target=task)</span><br><span class="line">t.start()  <span class="comment"># [[2]]</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>基于类继承 自定义类继承Thread，重写run()方法</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">MyThread</span>(threading.Thread):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">run</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&quot;自定义线程执行&quot;</span>)</span><br><span class="line">my_thread = MyThread()</span><br><span class="line">my_thread.start()  <span class="comment"># [[16]]</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li><p>高级功能</p>
+<ul>
+<li>锁机制：使用 Lock 、RLock 等同步原语保护共享资源，避免数据竞争</li>
+<li>守护线程：通过 setDaemon(True) 设置子线程随主线程结束而终止</li>
+<li>线程池：通过 concurrent.futures.ThreadPoolExecutor 管理线程池，简化并发任务调度</li>
+</ul>
+</li>
+</ul>
+<h3 id="注意事项-1"><a href="#注意事项-1" class="headerlink" title="注意事项"></a>注意事项</h3><ul>
+<li><p>全局解释器锁（GIL）</p>
+<p>Python的GIL确保同一时间仅有一个线程执行字节码，导致CPU密集型任务无法真正并行</p>
+<ul>
+<li><p>解决方案</p>
+<ul>
+<li>I&#x2F;O密集型任务：利用多线程并发处理，提升效率</li>
+<li>CPU密集型任务：改用多进程（multiprocessing）</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>线程安全与同步</p>
+<ul>
+<li>数据竞争：多个线程访问共享变量时可能导致不可预测的结果，需使用锁或信号量同步</li>
+<li>死锁：避免锁的嵌套或循环等待，确保锁获取顺序一致</li>
+<li>异常处理：线程异常不会自动终止程序，需通过try-except捕获异常</li>
+</ul>
+</li>
+<li><p>性能优化</p>
+<ul>
+<li>线程数量：过多线程会增加上下文切换开销，建议根据CPU核心数合理分配</li>
+<li>守护线程：设置daemon&#x3D;True可避免孤儿线程占用资源。</li>
+<li>资源管理：及时释放锁（如lock.release()）防止死锁</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="多协程"><a href="#多协程" class="headerlink" title="多协程"></a>多协程</h2><p>开始之前给大佬视频引流 -<a target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1oa411b7c9/?spm_id_from=333.337.search-card.all.click&vd_source=f6ad0f3e9d9d63873712e8c07454b756">bilibili高天讲解</a></p>
+<h3 id="Python多协程的核心概念"><a href="#Python多协程的核心概念" class="headerlink" title="Python多协程的核心概念"></a>Python多协程的核心概念</h3><ul>
+<li><p>定义与原理</p>
+<p>多协程（Coroutine）是一种用户态的轻量级线程，通过协作式多任务实现并发。与操作系统线程不同：</p>
+<ul>
+<li><p>切换开销极低：协程上下文切换发生在用户空间，无需内核介入</p>
+</li>
+<li><p>非抢占式调度：由事件循环（Event Loop）管理，协程主动让出执行权（await）时才会切换。</p>
+</li>
+<li><p>适用于IO密集型任务：如网络请求、文件读写等阻塞操作，在等待期间自动挂起并执行其他协程</p>
+</li>
+</ul>
+</li>
+<li><p>与线程&#x2F;进程的对比</p>
+<table>
+<thead>
+<tr>
+<th align="center">维度</th>
+<th align="center">协程</th>
+<th align="center">线程</th>
+<th align="center">进程</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">切换开销</td>
+<td align="center">微秒级（用户态切换）</td>
+<td align="center">毫秒级（内核态切换）</td>
+<td align="center">最高（资源独立）</td>
+</tr>
+<tr>
+<td align="center">内存占用</td>
+<td align="center">KB级（动态扩缩容）</td>
+<td align="center">MB级（固定栈大小）</td>
+<td align="center">GB级（独立内存空间）</td>
+</tr>
+<tr>
+<td align="center">并发能力</td>
+<td align="center">单进程可支持数万协程</td>
+<td align="center">受限于OS线程数（通常数百）</td>
+<td align="center">数十个</td>
+</tr>
+<tr>
+<td align="center">适用场景</td>
+<td align="center">IO密集型（网络&#x2F;文件）</td>
+<td align="center">IO&#x2F;CPU混合型</td>
+<td align="center">CPU密集型</td>
+</tr>
+<tr>
+<td align="center">GIL影响</td>
+<td align="center">不受限（单线程事件循环）</td>
+<td align="center">受CPython的GIL限制</td>
+<td align="center">无影响</td>
+</tr>
+</tbody></table>
+</li>
+</ul>
+<h3 id="多协程的具体实现与使用"><a href="#多协程的具体实现与使用" class="headerlink" title="多协程的具体实现与使用"></a>多协程的具体实现与使用</h3><ul>
+<li><p>核心库：asyncio</p>
+<p>Python通过asyncio标准库提供协程支持，核心组件包括</p>
+<ul>
+<li>事件循环（Event Loop） ：调度协程的核心引擎。</li>
+<li>协程函数（async def） ：定义异步任务，返回协程对象。</li>
+<li>任务（Task） ：由 asyncio.create_task() 创建的调度单元</li>
+</ul>
+</li>
+<li><p>基础并发模型</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> asyncio</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">fetch_data</span>(<span class="params">url</span>):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;请求 <span class="subst">&#123;url&#125;</span> 开始&quot;</span>)</span><br><span class="line">    <span class="keyword">await</span> asyncio.sleep(<span class="number">1</span>)  <span class="comment"># 模拟网络延迟（非阻塞）</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;请求 <span class="subst">&#123;url&#125;</span> 完成&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">main</span>():</span><br><span class="line">    <span class="comment"># 使用gather并发执行多个协程</span></span><br><span class="line">    <span class="keyword">await</span> asyncio.gather(</span><br><span class="line">        fetch_data(<span class="string">&quot;https://api1.com&quot;</span>),</span><br><span class="line">        fetch_data(<span class="string">&quot;https://api2.com&quot;</span>)</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line">asyncio.run(main())  <span class="comment"># 启动事件循环[[1]][[3]][[10]]</span></span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure></li>
+</ul>
+
     </div>
 
     
@@ -392,7 +527,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">多进程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD%E8%AF%B4%E6%98%8E"><span class="nav-number">1.1.</span> <span class="nav-text">功能说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%B3%95"><span class="nav-number">1.2.</span> <span class="nav-text">实现方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.3.</span> <span class="nav-text">注意事项</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">多线程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E7%AE%A1%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">多管程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E6%AF%94%E5%88%86%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">对比分析</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">多进程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD%E8%AF%B4%E6%98%8E"><span class="nav-number">1.1.</span> <span class="nav-text">功能说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%B3%95"><span class="nav-number">1.2.</span> <span class="nav-text">实现方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">1.3.</span> <span class="nav-text">注意事项</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">多线程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD%E8%A6%86%E7%9B%96"><span class="nav-number">2.1.</span> <span class="nav-text">功能覆盖</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E6%96%B9%E6%B3%95-1"><span class="nav-number">2.2.</span> <span class="nav-text">实现方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9-1"><span class="nav-number">2.3.</span> <span class="nav-text">注意事项</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E5%8D%8F%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">多协程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Python%E5%A4%9A%E5%8D%8F%E7%A8%8B%E7%9A%84%E6%A0%B8%E5%BF%83%E6%A6%82%E5%BF%B5"><span class="nav-number">3.1.</span> <span class="nav-text">Python多协程的核心概念</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%9A%E5%8D%8F%E7%A8%8B%E7%9A%84%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0%E4%B8%8E%E4%BD%BF%E7%94%A8"><span class="nav-number">3.2.</span> <span class="nav-text">多协程的具体实现与使用</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 

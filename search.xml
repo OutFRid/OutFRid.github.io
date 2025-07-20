@@ -66,7 +66,69 @@ index.md 是github page自动生成博客首页的md源文件
       </tags>
   </entry>
   <entry>
-    <title>Python多进程、多线程、多管程浅解</title>
+    <title>OutFRid 的个人博客</title>
+    <url>/index/</url>
+    <content><![CDATA[<h2 id="欢迎来到我的个人博客"><a href="#欢迎来到我的个人博客" class="headerlink" title="欢迎来到我的个人博客"></a>欢迎来到我的个人博客</h2><hr>
+<p><img src="/images/index.jpg" alt="主题照片"></p>
+<hr>
+<h2 id="我的文章"><a href="#我的文章" class="headerlink" title="我的文章"></a>我的文章</h2><ul>
+<li><a href="../blogArchitectureAnalysis/index.html">Github博客制作</a></li>
+</ul>
+<details><summary markdown="span">Python基础</summary>
+
+<ul>
+<li><p><a href="../pyAio/index.html">python代码源码、字节码分析方法</a></p>
+</li>
+<li><p><a href="../pyDis/index.html">Python多进程、多线程、多协程浅解</a></p>
+</li>
+<li><p>[Python上下文管理器浅解](Context manager)</p>
+</details></li>
+</ul>
+<p><strong><del>暂时还没有其他更新</del></strong></p>
+]]></content>
+      <tags>
+        <tag>-index</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>python代码源码、字节码分析方法</title>
+    <url>/pyDis/</url>
+    <content><![CDATA[<h3 id="简单介绍"><a href="#简单介绍" class="headerlink" title="简单介绍"></a>简单介绍</h3><p>这是一个python包，需要通过import使用，来看看官方的说明</p>
+<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">dis 模块通过反汇编支持CPython的 bytecode 分析。该模块作为输入的 CPython 字节码在文件 Include/opcode.h 中定义，并由编译器和解释器使用。</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h3 id="CPython"><a href="#CPython" class="headerlink" title="CPython"></a>CPython</h3><p>很好，引出了个新概念 CPython , 这是什么东西？</p>
+<p>CPython即用C语言环境实现Python及其解释器， 根据Python实现方法的不同，有Cpython, Jython, Pypy等</p>
+<p>比如Jython就是跑在JVM上的，我的理解上，就是通过不同的底层环境实现的不同Python解释器，就如同用机器汇编语言实现C语言一样，本质上就是编译器的实现环境、实现细节以及支持功能等等不同</p>
+<p>就好像博主曾经用Python写过一个功能不全的C语言编译器，在这里可能就会被叫做PyC。</p>
+<p>而CPython是当前应用最广泛即默认的Python解释器</p>
+<hr>
+<h3 id="功能描述"><a href="#功能描述" class="headerlink" title="功能描述"></a>功能描述</h3><p>那 dis 这个模块有什么作用呢？</p>
+<p>如果你只是想用Python写项目、跑AI、做开发，这个模块几乎用不到，但是这个模块可以将Python代码反汇编为字节码，更好的查看你的Python代码到底做了什么事情，从而在代码实现的角度进行时间、空间上的优化，或是发现原来代码中可能出现的BUG，这种BUG不是你的Python语法、设计思路有问题，而有可能是解释器本身不支持这样写。</p>
+<hr>
+<h3 id="示例体验"><a href="#示例体验" class="headerlink" title="示例体验"></a>示例体验</h3><p>给定函数 myfunc（）</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">myfunc</span>(<span class="params">alist</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">len</span>(alist)</span><br></pre></td></tr></table></figure>
+<p><img src="/images/disFunc1.png" alt="IDE图片"><br>调用命令</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">dis.dis(myfunc)</span><br></pre></td></tr></table></figure>
+<p>输出</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"> <span class="number">57</span>           <span class="number">0</span> RESUME                   <span class="number">0</span></span><br><span class="line"></span><br><span class="line"> <span class="number">58</span>           <span class="number">2</span> LOAD_GLOBAL              <span class="number">1</span> (NULL + <span class="built_in">len</span>)</span><br><span class="line">             <span class="number">14</span> LOAD_FAST                <span class="number">0</span> (alist)</span><br><span class="line">             <span class="number">16</span> PRECALL                  <span class="number">1</span></span><br><span class="line">             <span class="number">20</span> CALL                     <span class="number">1</span></span><br><span class="line">             <span class="number">30</span> RETURN_VALUE</span><br><span class="line"><span class="comment">#其中 57、58是IDE中的行号</span></span><br></pre></td></tr></table></figure>
+<p>另举一例做各部分解释：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">f</span>(<span class="params">num</span>):</span><br><span class="line">    <span class="keyword">if</span> num == <span class="number">42</span>:</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line">​</span><br><span class="line">​</span><br><span class="line"><span class="keyword">import</span> dis  <span class="comment"># 导入dis库</span></span><br><span class="line">dis.dis(f) </span><br></pre></td></tr></table></figure>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">(<span class="number">1</span>)|(<span class="number">2</span>)|(<span class="number">3</span>)|(<span class="number">4</span>)|          (<span class="number">5</span>)         |(<span class="number">6</span>)|  (<span class="number">7</span>)</span><br><span class="line">---|---|---|---|----------------------|---|-------</span><br><span class="line">  <span class="number">2</span>|   |   |  <span class="number">0</span>|LOAD_FAST             |  <span class="number">0</span>|(num)</span><br><span class="line">   |--&gt;|   |  <span class="number">2</span>|LOAD_CONST            |  <span class="number">1</span>|(<span class="number">42</span>)</span><br><span class="line">   |   |   |  <span class="number">4</span>|COMPARE_OP            |  <span class="number">2</span>|(==)</span><br><span class="line">   |   |   |  <span class="number">6</span>|POP_JUMP_IF_FALSE     | <span class="number">12</span>|</span><br><span class="line">   |   |   |   |                      |   |</span><br><span class="line">  <span class="number">3</span>|   |   |  <span class="number">8</span>|LOAD_CONST            |  <span class="number">2</span>|(<span class="literal">True</span>)</span><br><span class="line">   |   |   | <span class="number">10</span>|RETURN_VALUE          |   |</span><br><span class="line">   |   |   |   |                      |   |</span><br><span class="line">  <span class="number">4</span>|   |&gt;&gt; | <span class="number">12</span>|LOAD_CONST            |  <span class="number">3</span>|(<span class="literal">False</span>)</span><br><span class="line">   |   |   | <span class="number">14</span>|RETURN_VALUE          |   |</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">第1列: 源代码中的相应行号. </span><br><span class="line">第2列: 可选地指示执行的当前指令(例如，当字节码来自框架对象时). </span><br><span class="line">第3列: 一个标签，表示从早期指令到此指令的可能JUMP. </span><br><span class="line">第4列: 字节码中与字节索引相对应的地址(这些是2的倍数，因为Python 3.6对每条指令使用2字节，而之前的版本可能会有所不同). </span><br><span class="line">第5列: 指令名称(也称为opname)，每个指令名称都在dis模块中简要解释，它们的实现可以在ceval.c(CPython的核心文件)中找到. </span><br><span class="line">第6列: Python内部用于获取一些常量或变量、管理堆栈、跳转到特定指令等的指令的参数(如果有的话). </span><br><span class="line">第7列: 对解释器的参数的人性化的解释. </span><br></pre></td></tr></table></figure>
+
+<hr>
+<p>其余详细参数以及使用方法可以参照官方文档<br><a href="https://docs.python.org/zh-cn/3.13/library/dis.html">dis官方文档链接</a></p>
+]]></content>
+      <categories>
+        <category>-pyTutorial</category>
+      </categories>
+      <tags>
+        <tag>-python</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Python多进程、多线程、多协程浅解</title>
     <url>/pyAio/</url>
     <content><![CDATA[<h2 id="多进程"><a href="#多进程" class="headerlink" title="多进程"></a>多进程</h2><p>Python多进程是一种通过操作系统级资源分配实现并发执行的技术，其核心在于利用多个独立的进程并行处理任务。</p>
 <h3 id="功能说明"><a href="#功能说明" class="headerlink" title="功能说明"></a>功能说明</h3><ul>
@@ -129,76 +191,149 @@ index.md 是github page自动生成博客首页的md源文件
 </li>
 </ul>
 <hr>
-<h2 id="多线程"><a href="#多线程" class="headerlink" title="多线程"></a>多线程</h2><hr>
-<h2 id="多管程"><a href="#多管程" class="headerlink" title="多管程"></a>多管程</h2><hr>
-<h2 id="对比分析"><a href="#对比分析" class="headerlink" title="对比分析"></a>对比分析</h2>]]></content>
+<h2 id="多线程"><a href="#多线程" class="headerlink" title="多线程"></a>多线程</h2><h3 id="功能覆盖"><a href="#功能覆盖" class="headerlink" title="功能覆盖"></a>功能覆盖</h3><ul>
+<li><p>并发处理 </p>
+<p>多线程可同时执行多个任务，例如文件读写、网络请求等I&#x2F;O密集型操作，避免主线程阻塞，提升程序响应性</p>
+</li>
+<li><p>任务分解与并行执行</p>
+<p>将复杂任务拆分为子任务，通过多线程并行处理，缩短总耗时。例如，爬虫任务中可同时抓取多个网页(网卡也是IO设备)</p>
+</li>
+<li><p>资源共享与通信</p>
+<p>线程间共享进程内存空间，便于数据传递和协作，但需注意同步问题</p>
+</li>
+<li><p>适用场景</p>
+<ul>
+<li>I&#x2F;O密集型任务：如文件读写、网络请求、数据库操作等，线程在等待I&#x2F;O时可切换执行其他任务。</li>
+<li>用户界面优化：GUI应用中，后台任务（如进度计算）可与界面交互，避免卡顿。</li>
+<li>异步任务处理：如定时任务、监控任务等，可通过多线程实现非阻塞执行</li>
+</ul>
+</li>
+</ul>
+<h3 id="实现方法-1"><a href="#实现方法-1" class="headerlink" title="实现方法"></a>实现方法</h3><ul>
+<li><p>基础模块</p>
+<p>Python通过threading模块实现多线程，其核心功能包括：</p>
+<ul>
+<li><p>Thread类 用于创建线程，支持两种方式：</p>
+<ul>
+<li>基于函数：直接指定任务函数</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> threading</span><br><span class="line"><span class="keyword">def</span> <span class="title function_">task</span>():</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;线程执行中&quot;</span>)</span><br><span class="line">t = threading.Thread(target=task)</span><br><span class="line">t.start()  <span class="comment"># [[2]]</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>基于类继承 自定义类继承Thread，重写run()方法</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">class</span> <span class="title class_">MyThread</span>(threading.Thread):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">run</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&quot;自定义线程执行&quot;</span>)</span><br><span class="line">my_thread = MyThread()</span><br><span class="line">my_thread.start()  <span class="comment"># [[16]]</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li><p>高级功能</p>
+<ul>
+<li>锁机制：使用 Lock 、RLock 等同步原语保护共享资源，避免数据竞争</li>
+<li>守护线程：通过 setDaemon(True) 设置子线程随主线程结束而终止</li>
+<li>线程池：通过 concurrent.futures.ThreadPoolExecutor 管理线程池，简化并发任务调度</li>
+</ul>
+</li>
+</ul>
+<h3 id="注意事项-1"><a href="#注意事项-1" class="headerlink" title="注意事项"></a>注意事项</h3><ul>
+<li><p>全局解释器锁（GIL）</p>
+<p>Python的GIL确保同一时间仅有一个线程执行字节码，导致CPU密集型任务无法真正并行</p>
+<ul>
+<li><p>解决方案</p>
+<ul>
+<li>I&#x2F;O密集型任务：利用多线程并发处理，提升效率</li>
+<li>CPU密集型任务：改用多进程（multiprocessing）</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p>线程安全与同步</p>
+<ul>
+<li>数据竞争：多个线程访问共享变量时可能导致不可预测的结果，需使用锁或信号量同步</li>
+<li>死锁：避免锁的嵌套或循环等待，确保锁获取顺序一致</li>
+<li>异常处理：线程异常不会自动终止程序，需通过try-except捕获异常</li>
+</ul>
+</li>
+<li><p>性能优化</p>
+<ul>
+<li>线程数量：过多线程会增加上下文切换开销，建议根据CPU核心数合理分配</li>
+<li>守护线程：设置daemon&#x3D;True可避免孤儿线程占用资源。</li>
+<li>资源管理：及时释放锁（如lock.release()）防止死锁</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="多协程"><a href="#多协程" class="headerlink" title="多协程"></a>多协程</h2><p>开始之前给大佬视频引流 -<a href="https://www.bilibili.com/video/BV1oa411b7c9/?spm_id_from=333.337.search-card.all.click&vd_source=f6ad0f3e9d9d63873712e8c07454b756">bilibili高天讲解</a></p>
+<h3 id="Python多协程的核心概念"><a href="#Python多协程的核心概念" class="headerlink" title="Python多协程的核心概念"></a>Python多协程的核心概念</h3><ul>
+<li><p>定义与原理</p>
+<p>多协程（Coroutine）是一种用户态的轻量级线程，通过协作式多任务实现并发。与操作系统线程不同：</p>
+<ul>
+<li><p>切换开销极低：协程上下文切换发生在用户空间，无需内核介入</p>
+</li>
+<li><p>非抢占式调度：由事件循环（Event Loop）管理，协程主动让出执行权（await）时才会切换。</p>
+</li>
+<li><p>适用于IO密集型任务：如网络请求、文件读写等阻塞操作，在等待期间自动挂起并执行其他协程</p>
+</li>
+</ul>
+</li>
+<li><p>与线程&#x2F;进程的对比</p>
+<table>
+<thead>
+<tr>
+<th align="center">维度</th>
+<th align="center">协程</th>
+<th align="center">线程</th>
+<th align="center">进程</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">切换开销</td>
+<td align="center">微秒级（用户态切换）</td>
+<td align="center">毫秒级（内核态切换）</td>
+<td align="center">最高（资源独立）</td>
+</tr>
+<tr>
+<td align="center">内存占用</td>
+<td align="center">KB级（动态扩缩容）</td>
+<td align="center">MB级（固定栈大小）</td>
+<td align="center">GB级（独立内存空间）</td>
+</tr>
+<tr>
+<td align="center">并发能力</td>
+<td align="center">单进程可支持数万协程</td>
+<td align="center">受限于OS线程数（通常数百）</td>
+<td align="center">数十个</td>
+</tr>
+<tr>
+<td align="center">适用场景</td>
+<td align="center">IO密集型（网络&#x2F;文件）</td>
+<td align="center">IO&#x2F;CPU混合型</td>
+<td align="center">CPU密集型</td>
+</tr>
+<tr>
+<td align="center">GIL影响</td>
+<td align="center">不受限（单线程事件循环）</td>
+<td align="center">受CPython的GIL限制</td>
+<td align="center">无影响</td>
+</tr>
+</tbody></table>
+</li>
+</ul>
+<h3 id="多协程的具体实现与使用"><a href="#多协程的具体实现与使用" class="headerlink" title="多协程的具体实现与使用"></a>多协程的具体实现与使用</h3><ul>
+<li><p>核心库：asyncio</p>
+<p>Python通过asyncio标准库提供协程支持，核心组件包括</p>
+<ul>
+<li>事件循环（Event Loop） ：调度协程的核心引擎。</li>
+<li>协程函数（async def） ：定义异步任务，返回协程对象。</li>
+<li>任务（Task） ：由 asyncio.create_task() 创建的调度单元</li>
+</ul>
+</li>
+<li><p>基础并发模型</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> asyncio</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">fetch_data</span>(<span class="params">url</span>):</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;请求 <span class="subst">&#123;url&#125;</span> 开始&quot;</span>)</span><br><span class="line">    <span class="keyword">await</span> asyncio.sleep(<span class="number">1</span>)  <span class="comment"># 模拟网络延迟（非阻塞）</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;请求 <span class="subst">&#123;url&#125;</span> 完成&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="keyword">def</span> <span class="title function_">main</span>():</span><br><span class="line">    <span class="comment"># 使用gather并发执行多个协程</span></span><br><span class="line">    <span class="keyword">await</span> asyncio.gather(</span><br><span class="line">        fetch_data(<span class="string">&quot;https://api1.com&quot;</span>),</span><br><span class="line">        fetch_data(<span class="string">&quot;https://api2.com&quot;</span>)</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line">asyncio.run(main())  <span class="comment"># 启动事件循环[[1]][[3]][[10]]</span></span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure></li>
+</ul>
+]]></content>
       <categories>
         <category>-pyTutorial</category>
       </categories>
       <tags>
         <tag>-python -multiThread</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>python代码源码、字节码分析方法</title>
-    <url>/pyDis/</url>
-    <content><![CDATA[<h3 id="简单介绍"><a href="#简单介绍" class="headerlink" title="简单介绍"></a>简单介绍</h3><p>这是一个python包，需要通过import使用，来看看官方的说明</p>
-<figure class="highlight markdown"><table><tr><td class="code"><pre><span class="line">dis 模块通过反汇编支持CPython的 bytecode 分析。该模块作为输入的 CPython 字节码在文件 Include/opcode.h 中定义，并由编译器和解释器使用。</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h3 id="CPython"><a href="#CPython" class="headerlink" title="CPython"></a>CPython</h3><p>很好，引出了个新概念 CPython , 这是什么东西？</p>
-<p>CPython即用C语言环境实现Python及其解释器， 根据Python实现方法的不同，有Cpython, Jython, Pypy等</p>
-<p>比如Jython就是跑在JVM上的，我的理解上，就是通过不同的底层环境实现的不同Python解释器，就如同用机器汇编语言实现C语言一样，本质上就是编译器的实现环境、实现细节以及支持功能等等不同</p>
-<p>就好像博主曾经用Python写过一个功能不全的C语言编译器，在这里可能就会被叫做PyC。</p>
-<p>而CPython是当前应用最广泛即默认的Python解释器</p>
-<hr>
-<h3 id="功能描述"><a href="#功能描述" class="headerlink" title="功能描述"></a>功能描述</h3><p>那 dis 这个模块有什么作用呢？</p>
-<p>如果你只是想用Python写项目、跑AI、做开发，这个模块几乎用不到，但是这个模块可以将Python代码反汇编为字节码，更好的查看你的Python代码到底做了什么事情，从而在代码实现的角度进行时间、空间上的优化，或是发现原来代码中可能出现的BUG，这种BUG不是你的Python语法、设计思路有问题，而有可能是解释器本身不支持这样写。</p>
-<hr>
-<h3 id="示例体验"><a href="#示例体验" class="headerlink" title="示例体验"></a>示例体验</h3><p>给定函数 myfunc（）</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">myfunc</span>(<span class="params">alist</span>):</span><br><span class="line">    <span class="keyword">return</span> <span class="built_in">len</span>(alist)</span><br></pre></td></tr></table></figure>
-<p><img src="/images/disFunc1.png" alt="IDE图片"><br>调用命令</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">dis.dis(myfunc)</span><br></pre></td></tr></table></figure>
-<p>输出</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"> <span class="number">57</span>           <span class="number">0</span> RESUME                   <span class="number">0</span></span><br><span class="line"></span><br><span class="line"> <span class="number">58</span>           <span class="number">2</span> LOAD_GLOBAL              <span class="number">1</span> (NULL + <span class="built_in">len</span>)</span><br><span class="line">             <span class="number">14</span> LOAD_FAST                <span class="number">0</span> (alist)</span><br><span class="line">             <span class="number">16</span> PRECALL                  <span class="number">1</span></span><br><span class="line">             <span class="number">20</span> CALL                     <span class="number">1</span></span><br><span class="line">             <span class="number">30</span> RETURN_VALUE</span><br><span class="line"><span class="comment">#其中 57、58是IDE中的行号</span></span><br></pre></td></tr></table></figure>
-<p>另举一例做各部分解释：</p>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">def</span> <span class="title function_">f</span>(<span class="params">num</span>):</span><br><span class="line">    <span class="keyword">if</span> num == <span class="number">42</span>:</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">True</span></span><br><span class="line">    <span class="keyword">return</span> <span class="literal">False</span></span><br><span class="line">​</span><br><span class="line">​</span><br><span class="line"><span class="keyword">import</span> dis  <span class="comment"># 导入dis库</span></span><br><span class="line">dis.dis(f) </span><br></pre></td></tr></table></figure>
-<figure class="highlight python"><table><tr><td class="code"><pre><span class="line">(<span class="number">1</span>)|(<span class="number">2</span>)|(<span class="number">3</span>)|(<span class="number">4</span>)|          (<span class="number">5</span>)         |(<span class="number">6</span>)|  (<span class="number">7</span>)</span><br><span class="line">---|---|---|---|----------------------|---|-------</span><br><span class="line">  <span class="number">2</span>|   |   |  <span class="number">0</span>|LOAD_FAST             |  <span class="number">0</span>|(num)</span><br><span class="line">   |--&gt;|   |  <span class="number">2</span>|LOAD_CONST            |  <span class="number">1</span>|(<span class="number">42</span>)</span><br><span class="line">   |   |   |  <span class="number">4</span>|COMPARE_OP            |  <span class="number">2</span>|(==)</span><br><span class="line">   |   |   |  <span class="number">6</span>|POP_JUMP_IF_FALSE     | <span class="number">12</span>|</span><br><span class="line">   |   |   |   |                      |   |</span><br><span class="line">  <span class="number">3</span>|   |   |  <span class="number">8</span>|LOAD_CONST            |  <span class="number">2</span>|(<span class="literal">True</span>)</span><br><span class="line">   |   |   | <span class="number">10</span>|RETURN_VALUE          |   |</span><br><span class="line">   |   |   |   |                      |   |</span><br><span class="line">  <span class="number">4</span>|   |&gt;&gt; | <span class="number">12</span>|LOAD_CONST            |  <span class="number">3</span>|(<span class="literal">False</span>)</span><br><span class="line">   |   |   | <span class="number">14</span>|RETURN_VALUE          |   |</span><br></pre></td></tr></table></figure>
-<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">第1列: 源代码中的相应行号. </span><br><span class="line">第2列: 可选地指示执行的当前指令(例如，当字节码来自框架对象时). </span><br><span class="line">第3列: 一个标签，表示从早期指令到此指令的可能JUMP. </span><br><span class="line">第4列: 字节码中与字节索引相对应的地址(这些是2的倍数，因为Python 3.6对每条指令使用2字节，而之前的版本可能会有所不同). </span><br><span class="line">第5列: 指令名称(也称为opname)，每个指令名称都在dis模块中简要解释，它们的实现可以在ceval.c(CPython的核心文件)中找到. </span><br><span class="line">第6列: Python内部用于获取一些常量或变量、管理堆栈、跳转到特定指令等的指令的参数(如果有的话). </span><br><span class="line">第7列: 对解释器的参数的人性化的解释. </span><br></pre></td></tr></table></figure>
-
-<hr>
-<p>其余详细参数以及使用方法可以参照官方文档<br><a href="https://docs.python.org/zh-cn/3.13/library/dis.html">dis官方文档链接</a></p>
-]]></content>
-      <categories>
-        <category>-pyTutorial</category>
-      </categories>
-      <tags>
-        <tag>-python</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>OutFRid 的个人博客</title>
-    <url>/index/</url>
-    <content><![CDATA[<h2 id="欢迎来到我的个人博客"><a href="#欢迎来到我的个人博客" class="headerlink" title="欢迎来到我的个人博客"></a>欢迎来到我的个人博客</h2><hr>
-<p><img src="/images/index.jpg" alt="主题照片"></p>
-<hr>
-<h2 id="我的文章"><a href="#我的文章" class="headerlink" title="我的文章"></a>我的文章</h2><ul>
-<li><a href="../blogArchitectureAnalysis/index.html">Github博客制作</a></li>
-</ul>
-<details><summary markdown="span">Python基础</summary>
-
-<ul>
-<li><p><a href="../pyAio/index.html">python代码源码、字节码分析方法</a></p>
-</li>
-<li><p><a href="../pyDis/index.html">Python多进程、多线程、多管程浅解</a></p>
-</li>
-<li><p>[Python上下文管理器浅解](Context manager)</p>
-</details></li>
-</ul>
-<p><strong><del>暂时还没有其他更新</del></strong></p>
-]]></content>
-      <tags>
-        <tag>-index</tag>
       </tags>
   </entry>
 </search>
