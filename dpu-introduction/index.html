@@ -21,20 +21,20 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="这篇文章通过引用、分析来介绍如何快速实现自己的github博客">
+  <meta name="description" content="本文简单介绍了DPU是什么，有什么作用，以及有哪些相关技术，作为初学者的学习梳理。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Github博客制作">
-<meta property="og:url" content="http://example.com/blogArchitectureAnalysis/index.html">
+<meta property="og:title" content="DPU初步了解">
+<meta property="og:url" content="http://example.com/dpu-introduction/index.html">
 <meta property="og:site_name" content="OutFRid&#39;s Blog">
-<meta property="og:description" content="这篇文章通过引用、分析来介绍如何快速实现自己的github博客">
+<meta property="og:description" content="本文简单介绍了DPU是什么，有什么作用，以及有哪些相关技术，作为初学者的学习梳理。">
 <meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2025-07-12T09:03:16.000Z">
-<meta property="article:modified_time" content="2025-07-13T03:57:51.843Z">
+<meta property="article:published_time" content="2026-02-05T15:11:53.000Z">
+<meta property="article:modified_time" content="2026-02-09T00:07:16.067Z">
 <meta property="article:author" content="OutFRid">
-<meta property="article:tag" content="-blog">
+<meta property="article:tag" content="--DPU --network">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="http://example.com/blogArchitectureAnalysis/">
+<link rel="canonical" href="http://example.com/dpu-introduction/">
 
 
 <script id="page-configurations">
@@ -47,7 +47,7 @@
   };
 </script>
 
-  <title>Github博客制作 | OutFRid's Blog</title>
+  <title>DPU初步了解 | OutFRid's Blog</title>
   
 
 
@@ -191,7 +191,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
-    <link itemprop="mainEntityOfPage" href="http://example.com/blogArchitectureAnalysis/">
+    <link itemprop="mainEntityOfPage" href="http://example.com/dpu-introduction/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.png">
@@ -204,7 +204,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Github博客制作
+          DPU初步了解
         </h1>
 
         <div class="post-meta">
@@ -214,27 +214,18 @@
               </span>
               <span class="post-meta-item-text">Posted on</span>
 
-              <time title="Created: 2025-07-12 17:03:16" itemprop="dateCreated datePublished" datetime="2025-07-12T17:03:16+08:00">2025-07-12</time>
+              <time title="Created: 2026-02-05 23:11:53" itemprop="dateCreated datePublished" datetime="2026-02-05T23:11:53+08:00">2026-02-05</time>
             </span>
               <span class="post-meta-item">
                 <span class="post-meta-item-icon">
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2025-07-13 11:57:51" itemprop="dateModified" datetime="2025-07-13T11:57:51+08:00">2025-07-13</time>
+                <time title="Modified: 2026-02-09 08:07:16" itemprop="dateModified" datetime="2026-02-09T08:07:16+08:00">2026-02-09</time>
               </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/blog/" itemprop="url" rel="index"><span itemprop="name">-blog</span></a>
-                </span>
-            </span>
 
           
-            <div class="post-description">这篇文章通过引用、分析来介绍如何快速实现自己的github博客</div>
+            <div class="post-description">本文简单介绍了DPU是什么，有什么作用，以及有哪些相关技术，作为初学者的学习梳理。</div>
 
         </div>
       </header>
@@ -245,60 +236,145 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="前情提要-无用"><a href="#前情提要-无用" class="headerlink" title="前情提要 (无用)"></a>前情提要 (<del>无用</del>)</h2><hr>
-<p>出于方便复习、找工作、<del>装呗</del>等各种原因，博主开始了编写github博客，构建历程还是很坎坷的，期间由于信息闭塞，一开始选择手动构建博客框架，吃了不少苦头，最后选择了使用hexo来构建博客，与原来相同的工作量可以构建出更精美漂亮的博客，还兼容多种插件如gitalk等等。</p>
-<p>如果对手动构建博客还感兴趣的朋友可以参考本仓库的legacy-main分支，也就是我的构建博客废案</p>
-<p>简单介绍一下：</p>
-<pre><code>posts文件夹 存放想要发布的文章
-
-images文件夹 存放图片
-
-index.md 是github page自动生成博客首页的md源文件
-</code></pre>
-<h2 id="博客架构构建"><a href="#博客架构构建" class="headerlink" title="博客架构构建"></a>博客架构构建</h2><hr>
-<p>通过右上角可以直接看到我的博客源代码，你会发现一大串的文件夹与文件，不用害怕，绝大多数都是hexo自动生成的（赞美前人）。</p>
-<p>你需要准备的有：github账号、本地git（可选）、node.js(只需安装)、以及markdown和yml的基础语法知识等等</p>
-<p>这里有一篇我找到的最无脑向的教程</p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/371995929">前往知乎看教程</a></li>
+        <p>想要了解DPU，不可否认的，需要了解各种*PU，知道他们的功能区别，以及为什么需要拆分出这样的单独模块。下面给出AI芯片领域的XPU的含义简介，帮助了解一些相关知识。</p>
+<h2 id="XPU含义简介"><a href="#XPU含义简介" class="headerlink" title="XPU含义简介"></a>XPU含义简介</h2><ul>
+<li>含义： XPU指将多种不同类型的处理核心（如CPU、GPU、NPU及其他专用加速器IP）深度集成在同一个芯片（SoC）或封装内的异构处理器。其设计目标是通过紧密集成和高效互联，为复杂应用（如客户端AI、边缘计算）提供一体化的高性能、高能效解决方案。</li>
+<li>核心特征<ul>
+<li>异构集成：不是单一类型的核心，而是“CPU+GPU+NPU+其他”的组合。</li>
+<li>统一封装：这些核心通过先进的封装技术（如Foveros、CoWoS）或传统SoC设计集成在一起，共享高速内存池和互连总线。</li>
+<li>任务协同：操作系统和驱动程序能够自动或根据开发者指令，将不同任务分发给最适合的核心执行</li>
 </ul>
-<p><strong>注意</strong> ：该文章关于gitalk等额外甜品功能的配置，说明得很潦草，可以参考下面这两篇博客</p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://kuroha.vip/hexo/next_theme_beautify.html#%E6%B7%BB%E5%8A%A0%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F">前往看博客</a></li>
-<li><a target="_blank" rel="noopener" href="https://yuanlichenai.cn/2020/01/16/Gitalk/">gitalk专场</a></li>
+</li>
 </ul>
-<p>如果你看完了上面的教程，那你肯定已经构建好一个基本的博客框架了。如果你想要和我一样有一个主页实现目录功能，需要参考接下来的部分</p>
-<h2 id="目录文章构建"><a href="#目录文章构建" class="headerlink" title="目录文章构建"></a>目录文章构建</h2><hr>
-<p><del>单纯从不想浪费之前的手工制作主页</del></p>
+<h2 id="什么是DPU？"><a href="#什么是DPU？" class="headerlink" title="什么是DPU？"></a>什么是DPU？</h2><p>DPU（Data Processing Unit，数据处理单元）是专门设计用于数据中心基础设施处理的处理器。它主要承担数据移动、安全和网络处理等任务，将CPU从这些工作中解放出来，专注于应用程序执行。</p>
+<h3 id="DPU计算架构组成："><a href="#DPU计算架构组成：" class="headerlink" title="DPU计算架构组成："></a>DPU计算架构组成：</h3><ol>
+<li><p>控制处理器（Arm Cortex或RISC-V核心）</p>
 <ul>
-<li><a href="../index/index.html">提前看一眼实现效果</a></li>
+<li>运行控制平面软件</li>
+<li>管理系统资源</li>
 </ul>
-<p>由于使用了hexo框架，主页默认展示的是文章的集合，这部分我不打算更改（<del>菜的</del>），因为指向自定义的主页会与已有框架主题不兼容，而且框架本身提供了categories功能，可以实现分类功能</p>
-<p> 可以看到我的主页包含了一个可折叠的分类菜单，这部分据查在markdown中当下挂项目过多时由渲染自动实现，但我是通过html手工实现了一个。</p>
-<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="language-xml"><span class="tag">&lt;<span class="name">details</span>&gt;</span></span><span class="language-xml"><span class="tag">&lt;<span class="name">summary</span> <span class="attr">markdown</span>=<span class="string">&quot;span&quot;</span>&gt;</span></span>Github博客制作<span class="language-xml"><span class="tag">&lt;/<span class="name">summary</span>&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> [<span class="string">博客架构解析</span>](<span class="link">../hello-world/index.html</span>) </span><br><span class="line"></span><br><span class="line"><span class="bullet">-</span> [<span class="string">语法注意事项</span>](<span class="link">https://example.com</span>)</span><br><span class="line"><span class="language-xml"><span class="tag">&lt;/<span class="name">details</span>&gt;</span></span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>数据平面处理器</p>
+<ul>
+<li>可编程数据路径（P4语言支持）</li>
+<li>硬件加速引擎</li>
+</ul>
+</li>
+<li><p>专用加速器</p>
+<ul>
+<li>加密&#x2F;解密引擎（AES, SHA）</li>
+<li>正则表达式匹配</li>
+<li>压缩&#x2F;解压缩引擎</li>
+</ul>
+</li>
+</ol>
+<h3 id="主要DPU产品架构对比"><a href="#主要DPU产品架构对比" class="headerlink" title="主要DPU产品架构对比"></a>主要DPU产品架构对比</h3><table>
+<thead>
+<tr>
+<th align="center">厂商</th>
+<th align="center">产品系列</th>
+<th align="center">CPU核心</th>
+<th align="center">网络接口</th>
+<th align="center">特殊功能</th>
+<th align="center">目标市场</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">NVIDIA</td>
+<td align="center">BlueField系列</td>
+<td align="center">Arm Cortex-A72&#x2F;A78</td>
+<td align="center">25&#x2F;100&#x2F;200GbE</td>
+<td align="center">融合GPU加速</td>
+<td align="center">超大规模云、HPC</td>
+</tr>
+<tr>
+<td align="center">Intel</td>
+<td align="center">IPU系列</td>
+<td align="center">Xeon核心 + FPGA</td>
+<td align="center">100&#x2F;200&#x2F;400GbE</td>
+<td align="center">FPGA可编程性</td>
+<td align="center">电信、企业云</td>
+</tr>
+<tr>
+<td align="center">AMD</td>
+<td align="center">Pensando系列</td>
+<td align="center">定制处理器</td>
+<td align="center">25&#x2F;100GbE</td>
+<td align="center">分布式服务卡</td>
+<td align="center">企业数据中心</td>
+</tr>
+<tr>
+<td align="center">Marvell</td>
+<td align="center">OCTEON系列</td>
+<td align="center">多核MIPS&#x2F;ARM</td>
+<td align="center">10-200GbE</td>
+<td align="center">安全处理</td>
+<td align="center">网络设备、安全</td>
+</tr>
+<tr>
+<td align="center">Broadcom</td>
+<td align="center">Stingray系列</td>
+<td align="center">Arm Neoverse N1</td>
+<td align="center">100&#x2F;200GbE</td>
+<td align="center">存储虚拟化</td>
+<td align="center">存储服务器</td>
+</tr>
+</tbody></table>
+<p>可以看到大部分DPU产品的应用场景是大规模的数据存储&#x2F;调用。</p>
+<h2 id="XPU和DPU的对比"><a href="#XPU和DPU的对比" class="headerlink" title="XPU和DPU的对比"></a>XPU和DPU的对比</h2><table>
+<thead>
+<tr>
+<th align="left">维度</th>
+<th align="left">XPU（如GPU&#x2F;TPU）</th>
+<th align="left">DPU</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">主要目标</td>
+<td align="left">计算性能最大化</td>
+<td align="left">数据移动效率最大化</td>
+</tr>
+<tr>
+<td align="left">优化指标</td>
+<td align="left">FLOPS&#x2F;TOPS（计算吞吐量）</td>
+<td align="left">数据包处理速率、延迟</td>
+</tr>
+<tr>
+<td align="left">工作负载</td>
+<td align="left">规则的计算密集型任务</td>
+<td align="left">不规则的数据移动任务</td>
+</tr>
+<tr>
+<td align="left">内存系统</td>
+<td align="left">高带宽、大容量</td>
+<td align="left">低延迟、高队列深度</td>
+</tr>
+<tr>
+<td align="left">编程模型</td>
+<td align="left">SIMD&#x2F;SIMT并行</td>
+<td align="left">流水线处理、事件驱动</td>
+</tr>
+</tbody></table>
+<h3 id="可以简单分析XPU和DPU的关系如下"><a href="#可以简单分析XPU和DPU的关系如下" class="headerlink" title="可以简单分析XPU和DPU的关系如下"></a>可以简单分析XPU和DPU的关系如下</h3><ul>
+<li><p>并列关系（在系统层面）：</p>
+<ul>
+<li>XPU：主要负责应用程序的计算任务（通用计算+图形渲染+AI推理）。</li>
+<li>DPU：主要负责系统的数据基础设施任务（网络、存储、安全虚拟化）。<br>  它们在现代服务器或PC中，可以是两个独立的芯片，协同工作。例如，一台AI服务器可能同时装有集成CPU+GPU+NPU的XPU芯片和负责高速网络与存储卸载的DPU卡。</li>
+</ul>
+</li>
+<li><p>包含关系（在未来演进中）：</p>
+<p>  随着芯片集成度不断提高，未来的XPU（集成芯片）有可能将DPU的部分核心功能作为IP模块集成进来。例如，未来的客户端XPU可能会集成一个轻量级的网络&#x2F;安全引擎。同样，未来的服务器DPU也可能集成更强的通用计算或AI加速核心。<br>  英特代号“Falcon Shores”的数据中心XPU，其目标就是融合至强CPU与Xe GPU，虽然不叫DPU，但它在处理HPC和AI工作负载时，必然会融合高性能的数据传输能力。</p>
+</li>
+<li><p>侧重点不同：</p>
+<p>  XPU的集成，侧重于提升终端应用的性能和能效，其集成对象是计算类核心。<br>  DPU的设计，侧重于卸载和管理数据中心基础设施，其核心能力是数据移动和策略执行。</p>
+</li>
+</ul>
+<hr>
+<p>之所以要花这么大的篇幅去说XPU，就是想表达，DPU其实也是<em>PU的一种，将特定功能从CPU上独立出来，用一个单独、高效的模块去执行这一部分功能。<br>整个</em>PU系统的最终能效比计算公式为：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">系统能效比 = Σ(性能_i) / Σ(功耗_i)</span><br></pre></td></tr></table></figure>
 
-<p>这是md文件中的写法，但是，坑人的来了——github page默认的md解释器是不支持在html代码块中解释md代码的，所以，想要实现折叠功能，需要在博客项目根目录下的_config.yml文件中加上如下代码:</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># The release of Jekyll Now</span></span><br><span class="line"><span class="attr">version:</span> <span class="string">v1.2.0</span></span><br><span class="line"></span><br><span class="line"><span class="attr">markdown:</span> <span class="string">kramdown</span></span><br><span class="line"><span class="attr">kramdown:</span></span><br><span class="line"><span class="comment"># Use GitHub flavored markdown, including triple backtick fenced code blocks</span></span><br><span class="line">  <span class="attr">input:</span> <span class="string">GFM</span></span><br><span class="line">  <span class="attr">parse_block_html:</span> <span class="literal">true</span>  <span class="comment"># 启用HTML块内Markdown解析</span></span><br></pre></td></tr></table></figure>
-<p>综上，你就可以通过你的md知识，构建出一个简单的目录文章（<del>我可没有在骂人</del>）</p>
-<h2 id="语法注意事项"><a href="#语法注意事项" class="headerlink" title="语法注意事项"></a>语法注意事项</h2><hr>
-<p>如何在文章中引用本站文章呢(不通过htttp形式的链接)?</p>
-<p>由于你的文章md文件保存在theme&#x2F;%yourTheme&#x2F;source&#x2F;posts目录下，</p>
-<p>假设你当前在文章1，md传统写法是</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[跳转！](文章2.md)</span><br></pre></td></tr></table></figure>
-<p>Buuuuuut！！！因为hexo框架的设计，实际跳转是在public中找到生成好的html文件，而上述代码被框架翻译来就是，在public&#x2F;文章1&#x2F;文件夹下寻找名为文章2.md的文件</p>
-<p>此时public文件夹内容如下</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">public:</span></span><br><span class="line">  <span class="string">文章1：</span></span><br><span class="line">    <span class="string">index.html</span></span><br><span class="line">  <span class="string">文章2：</span></span><br><span class="line">    <span class="string">index.html</span></span><br></pre></td></tr></table></figure>
-<p>所以，正确的写法是</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[跳转！](../文章1/index.html)</span><br></pre></td></tr></table></figure>
-<p>注意public下html存放的文件夹的名称与项目根目录下_config.yml文件中的</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">permalink: :title/ #这条参数有关，我设置的是title，避免了日期格式的多重目录</span><br></pre></td></tr></table></figure>
-
-
-
-
-
-
-
+<p>而每种硬件都有其最优工作负载区间，分离出来既可以专项优化，又可以通过专用硬件加速可并行部分。                                                          </p>
+<hr>
 
     </div>
 
@@ -308,7 +384,7 @@ index.md 是github page自动生成博客首页的md源文件
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/blog/" rel="tag"># -blog</a>
+              <a href="/tags/DPU-network/" rel="tag"># --DPU --network</a>
           </div>
 
         
@@ -317,13 +393,10 @@ index.md 是github page自动生成博客首页的md源文件
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/index/" rel="prev" title="OutFRid 的个人博客">
-      <i class="fa fa-chevron-left"></i> OutFRid 的个人博客
+    <a href="/pyDis/" rel="prev" title="python代码源码、字节码分析方法">
+      <i class="fa fa-chevron-left"></i> python代码源码、字节码分析方法
     </a></div>
-      <div class="post-nav-item">
-    <a href="/pyAio/" rel="next" title="Python多进程、多线程、多协程浅解">
-      Python多进程、多线程、多协程浅解 <i class="fa fa-chevron-right"></i>
-    </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
@@ -383,7 +456,7 @@ index.md 是github page自动生成博客首页的md源文件
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E6%83%85%E6%8F%90%E8%A6%81-%E6%97%A0%E7%94%A8"><span class="nav-number">1.</span> <span class="nav-text">前情提要 (无用)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%9A%E5%AE%A2%E6%9E%B6%E6%9E%84%E6%9E%84%E5%BB%BA"><span class="nav-number">2.</span> <span class="nav-text">博客架构构建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95%E6%96%87%E7%AB%A0%E6%9E%84%E5%BB%BA"><span class="nav-number">3.</span> <span class="nav-text">目录文章构建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%AD%E6%B3%95%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9"><span class="nav-number">4.</span> <span class="nav-text">语法注意事项</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#XPU%E5%90%AB%E4%B9%89%E7%AE%80%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">XPU含义简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFDPU%EF%BC%9F"><span class="nav-number">2.</span> <span class="nav-text">什么是DPU？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#DPU%E8%AE%A1%E7%AE%97%E6%9E%B6%E6%9E%84%E7%BB%84%E6%88%90%EF%BC%9A"><span class="nav-number">2.1.</span> <span class="nav-text">DPU计算架构组成：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BB%E8%A6%81DPU%E4%BA%A7%E5%93%81%E6%9E%B6%E6%9E%84%E5%AF%B9%E6%AF%94"><span class="nav-number">2.2.</span> <span class="nav-text">主要DPU产品架构对比</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#XPU%E5%92%8CDPU%E7%9A%84%E5%AF%B9%E6%AF%94"><span class="nav-number">3.</span> <span class="nav-text">XPU和DPU的对比</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%AF%E4%BB%A5%E7%AE%80%E5%8D%95%E5%88%86%E6%9E%90XPU%E5%92%8CDPU%E7%9A%84%E5%85%B3%E7%B3%BB%E5%A6%82%E4%B8%8B"><span class="nav-number">3.1.</span> <span class="nav-text">可以简单分析XPU和DPU的关系如下</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -530,7 +603,7 @@ NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
       repo        : 'OutFRid.github.io',
       owner       : 'OutFRid',
       admin       : ['OutFRid'],
-      id          : '7d6f4022bdd003b8cdf17243b479e58a',
+      id          : 'cd90ddf8e93de50e8d0c18cf0a694f32',
         language: '',
       distractionFreeMode: true
     });
