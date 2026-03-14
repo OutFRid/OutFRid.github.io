@@ -669,5 +669,8 @@ index.md 是github page自动生成博客首页的md源文件
 <p>注：本文基于Linux内核5.x版本进行分析，不同版本的内核实现细节可能有所差异，但伙伴系统的核心原理保持一致。</p>
 </blockquote>
 ]]></content>
+      <tags>
+        <tag>--linux --memory</tag>
+      </tags>
   </entry>
 </search>
