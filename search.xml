@@ -673,4 +673,196 @@ index.md 是github page自动生成博客首页的md源文件
         <tag>--linux --memory</tag>
       </tags>
   </entry>
+  <entry>
+    <title>DMD 数据集 + YOLOv8-nano ONNX → OM → ACL 第一帧推理记录</title>
+    <url>/dmd-yolov8n-acl-first-frame/</url>
+    <content><![CDATA[<blockquote>
+<p>硬件: Huawei Atlas 200I DK (Ascend 310B4, 3.4G DDR, 8G eMMC swap)<br>系统: CANN 7.0.RC1, Python 3.9.2<br>数据集: DMD (Driver Monitoring Dataset) — distraction + drowsiness + gaze</p>
+</blockquote>
+<hr>
+<h2 id="1-数据集解压"><a href="#1-数据集解压" class="headerlink" title="1. 数据集解压"></a>1. 数据集解压</h2><p>36 个 <code>.tar.gz</code> 包（总计约 150GB）解压到 1TB 移动 SSD (闪迪 E61)：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">mount /dev/sda1 /mnt/e61</span><br><span class="line"><span class="built_in">cd</span> /mnt/e61/workspace</span><br><span class="line"><span class="keyword">for</span> f <span class="keyword">in</span> dmd/*.tar.gz; <span class="keyword">do</span> tar -xzf <span class="string">&quot;<span class="variable">$f</span>&quot;</span> &amp; <span class="keyword">done</span>; <span class="built_in">wait</span></span><br></pre></td></tr></table></figure>
+<p>DMD 三个子任务（distraction / drowsiness / gaze）共享同一批视频文件，解压后合并为同一个目录树。每个 session 包含：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">dmd/gA/1/s6/</span><br><span class="line">  *_rgb_mosaic.avi      # 多视角拼接视频</span><br><span class="line">  *_rgb_face.mp4        # 人脸视频 ← 人脸检测/视线估计用这个</span><br><span class="line">  *_rgb_body.mp4        # 身体视频</span><br><span class="line">  *_rgb_hands.mp4       # 手势视频 ← 手部检测用这个</span><br><span class="line">  *_ann_gaze.json       # 视线标注</span><br><span class="line">  *_ann_hands.json      # 手势标注</span><br><span class="line">  *_ann_distraction.json / *_ann_drowsiness.json  # 分心/疲劳标注（不是每个 session 都有）</span><br></pre></td></tr></table></figure>
+<p>解压完成后删除 <code>.tar.gz</code> 释放约 150GB 空间：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="built_in">rm</span> /mnt/e61/workspace/dmd/*.tar.gz</span><br></pre></td></tr></table></figure>
+<hr>
+<h2 id="2-YOLOv8-nano-→-ONNX-导出"><a href="#2-YOLOv8-nano-→-ONNX-导出" class="headerlink" title="2. YOLOv8-nano → ONNX 导出"></a>2. YOLOv8-nano → ONNX 导出</h2><p><strong>环境</strong>: Windows 本地 conda <code>torchGPU</code> (Python 3.12, PyTorch 2.6+cu124)</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">from</span> ultralytics <span class="keyword">import</span> YOLO</span><br><span class="line">model = YOLO(<span class="string">&quot;yolov8n.pt&quot;</span>)</span><br><span class="line">model.export(<span class="built_in">format</span>=<span class="string">&quot;onnx&quot;</span>, opset=<span class="number">11</span>, imgsz=<span class="number">640</span>, simplify=<span class="literal">True</span>, half=<span class="literal">False</span>, dynamic=<span class="literal">False</span>, batch=<span class="number">1</span>)</span><br></pre></td></tr></table></figure>
+<p><strong>产物</strong>:</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>大小</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>yolov8n.onnx</code></td>
+<td>12.3 MB</td>
+<td>IR v6, Opset 11, Input: <code>images [1,3,640,640]</code>, Output: <code>output0 [1,84,8400]</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="3-ONNX-→-OM-离线模型编译"><a href="#3-ONNX-→-OM-离线模型编译" class="headerlink" title="3. ONNX → OM (离线模型编译)"></a>3. ONNX → OM (离线模型编译)</h2><h3 id="3-1-板端编译（失败）"><a href="#3-1-板端编译（失败）" class="headerlink" title="3.1 板端编译（失败）"></a>3.1 板端编译（失败）</h3><p><strong>原因</strong>: 板子 3.4G DDR，Ascend310B4 编译需 2-3GB 峰值内存，DDR 不足导致 swap 颠簸卡死。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">ATC run failed</span><br><span class="line">→ swap 涨到 7.4/8.0 GB  → kill 进程</span><br><span class="line">→ 单线程 OMP_NUM_THREADS=1  → 仍然 swap 爆炸</span><br></pre></td></tr></table></figure>
+<h3 id="3-2-WSL2-交叉编译（成功）"><a href="#3-2-WSL2-交叉编译（成功）" class="headerlink" title="3.2 WSL2 交叉编译（成功）"></a>3.2 WSL2 交叉编译（成功）</h3><p><strong>环境</strong>: Windows WSL2 Ubuntu 22.04 x86_64</p>
+<p>下载 CANN 7.0.1 BETA1 (与板端 7.0.RC1 同大版本，兼容) → 安装到 <code>/root/Ascend</code></p>
+<p><strong>踩坑记录</strong>:</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>错误</th>
+<th>原因</th>
+<th>解决</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/root</code> permission too small</td>
+<td>WSL2 默认 700</td>
+<td><code>chmod 755 /root</code></td>
+</tr>
+<tr>
+<td><code>ModuleNotFoundError: numpy</code></td>
+<td>WSL2 无 Python 依赖</td>
+<td><code>apt install python3-pip python3-numpy</code></td>
+</tr>
+<tr>
+<td><code>AttributeError: np.float_ removed</code></td>
+<td>NumPy 2.x 不兼容 CANN 7.0</td>
+<td><code>pip install &quot;numpy&lt;2&quot;</code></td>
+</tr>
+<tr>
+<td><code>libascend_hal.so not found</code></td>
+<td>set_env.sh 未设 stub 路径</td>
+<td>手动 export LD_LIBRARY_PATH</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>编译命令</strong>:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="built_in">source</span> /root/Ascend/ascend-toolkit/set_env.sh</span><br><span class="line"><span class="built_in">export</span> LD_LIBRARY_PATH=/root/Ascend/ascend-toolkit/latest/runtime/lib64/stub:\</span><br><span class="line">/root/Ascend/ascend-toolkit/latest/x86_64-linux/devlib:<span class="variable">$LD_LIBRARY_PATH</span></span><br><span class="line"></span><br><span class="line">atc --model=models/yolov8n.onnx --framework=5 --output=models/yolov8n \</span><br><span class="line">    --soc_version=Ascend310B4 --input_format=NCHW \</span><br><span class="line">    --input_shape=<span class="string">&quot;images:1,3,640,640&quot;</span></span><br></pre></td></tr></table></figure>
+<p><strong>产物</strong>:</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>大小</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>yolov8n.om</code></td>
+<td>7.0 MB</td>
+<td>Ascend 310B4 离线模型，算子融合后压缩 43%</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="4-ACL-Python-推理"><a href="#4-ACL-Python-推理" class="headerlink" title="4. ACL Python 推理"></a>4. ACL Python 推理</h2><h3 id="4-1-ATC-与-ACL"><a href="#4-1-ATC-与-ACL" class="headerlink" title="4.1 ATC 与 ACL"></a>4.1 ATC 与 ACL</h3><div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>ATC</th>
+<th>ACL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>角色</td>
+<td>编译器 (类比 gcc)</td>
+<td>运行时 SDK (类比 CUDA Runtime)</td>
+</tr>
+<tr>
+<td>输入</td>
+<td>ONNX/TF/PyTorch</td>
+<td>OM 离线模型</td>
+</tr>
+<tr>
+<td>输出</td>
+<td><code>.om</code></td>
+<td>推理结果</td>
+</tr>
+<tr>
+<td>类比</td>
+<td><code>gcc main.c -o a.out</code></td>
+<td><code>./a.out</code></td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="4-2-CANN-7-0-RC1-Python-API-坑-重要！"><a href="#4-2-CANN-7-0-RC1-Python-API-坑-重要！" class="headerlink" title="4.2 CANN 7.0.RC1 Python API 坑 (重要！)"></a>4.2 CANN 7.0.RC1 Python API 坑 (重要！)</h3><p>CANN 不同版本 Python ACL API 签名差异大，本次实例总结：</p>
+<figure class="highlight python"><table><tr><td class="code"><pre><span class="line"><span class="keyword">import</span> acl</span><br><span class="line"></span><br><span class="line"><span class="comment"># ✅ 正确签名</span></span><br><span class="line">acl.init(<span class="string">&quot;&quot;</span>)                                              <span class="comment"># str</span></span><br><span class="line">acl.rt.set_device(<span class="number">0</span>)                                      <span class="comment"># int → ret</span></span><br><span class="line">ctx, ret = acl.rt.create_context(<span class="number">0</span>)                       <span class="comment"># int → (context, ret)</span></span><br><span class="line">mid, ret = acl.mdl.load_from_file(<span class="string">&quot;model.om&quot;</span>)            <span class="comment"># str → (model_id, ret)</span></span><br><span class="line">desc = acl.mdl.create_desc()                              <span class="comment"># desc</span></span><br><span class="line">acl.mdl.get_desc(desc, mid)                               <span class="comment"># → ret</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ⚠️ create_data_buffer: CANN 7.0 是 (ptr, size)，不是 (size, type)!</span></span><br><span class="line">buf = acl.create_data_buffer(dev_ptr, size)               <span class="comment"># (int, int) → buf_id</span></span><br><span class="line">addr = acl.get_data_buffer_addr(buf)                      <span class="comment"># buf_id → int</span></span><br><span class="line">buf_size = acl.get_data_buffer_size(buf)                  <span class="comment"># buf_id → int</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ⚠️ add_dataset_buffer 返回 tuple!</span></span><br><span class="line">_, ret = acl.mdl.add_dataset_buffer(ds, buf)              <span class="comment"># → (buf_handle, ret)</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># ⚠️ 必须先用 rt.malloc 分配设备内存</span></span><br><span class="line">dev_ptr, ret = acl.rt.malloc(size, <span class="number">0</span>)                     <span class="comment"># → (ptr, ret)</span></span><br><span class="line">ret = acl.rt.memcpy(dst, dst_max, src, src_max, kind)     <span class="comment"># 参数都是 int</span></span><br><span class="line">acl.rt.free(dev_ptr)                                      <span class="comment"># 释放设备内存</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 推理</span></span><br><span class="line">ret = acl.mdl.execute(model_id, in_ds, out_ds)            <span class="comment"># → ret</span></span><br><span class="line">acl.rt.synchronize_stream(<span class="number">0</span>)</span><br></pre></td></tr></table></figure>
+<h3 id="4-3-完整推理流程"><a href="#4-3-完整推理流程" class="headerlink" title="4.3 完整推理流程"></a>4.3 完整推理流程</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">1. acl.init(&quot;&quot;)</span><br><span class="line">2. acl.rt.set_device(0)</span><br><span class="line">3. acl.rt.create_context(0)</span><br><span class="line">4. acl.mdl.load_from_file(om_path)</span><br><span class="line">5. acl.mdl.create_desc() + get_desc()</span><br><span class="line">6. acl.rt.malloc(in_size) → dev_ptr_in         # 分配设备内存</span><br><span class="line">7. acl.rt.memcpy(dev_ptr_in, ..., host_ptr, ..., H2D)   # 拷贝输入到设备</span><br><span class="line">8. acl.create_data_buffer(dev_ptr_in, in_size)  # 包装设备指针</span><br><span class="line">9. acl.mdl.add_dataset_buffer(in_ds, in_buf)</span><br><span class="line">10. acl.rt.malloc(out_size) → dev_ptr_out</span><br><span class="line">11. acl.create_data_buffer(dev_ptr_out, out_size)</span><br><span class="line">12. acl.mdl.add_dataset_buffer(out_ds, out_buf)</span><br><span class="line">13. acl.mdl.execute(model_id, in_ds, out_ds)     # NPU 推理</span><br><span class="line">14. acl.rt.memcpy(host_ptr, ..., dev_ptr_out, ..., D2H)  # 拷贝输出回主机</span><br><span class="line">15. 后处理 (YOLO decode + NMS)</span><br><span class="line">16. 清理: destroy_data_buffer → destroy_dataset → rt.free → mdl.unload → destroy_context → finalize</span><br></pre></td></tr></table></figure>
+<hr>
+<h2 id="5-第一帧推理结果"><a href="#5-第一帧推理结果" class="headerlink" title="5. 第一帧推理结果"></a>5. 第一帧推理结果</h2><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Video : gA_1_s6_2019-03-08T09;15;15+01;00_rgb_mosaic.avi</span><br><span class="line">        1280x720, 5340 frames, 29.8 fps</span><br><span class="line">Tensor: (1, 3, 640, 640)  float32</span><br><span class="line"></span><br><span class="line">--- ACL Init ---</span><br><span class="line">  OK</span><br><span class="line"></span><br><span class="line">--- Load OM ---</span><br><span class="line">  Inputs  [1]: dims=[[1, 3, 640, 640]]  sizes=[4915200]</span><br><span class="line">  Outputs [1]: dims=[[1, 84, 8400]]  sizes=[2822400]</span><br><span class="line"></span><br><span class="line">--- Infer ---</span><br><span class="line">==================================================</span><br><span class="line">Latency   : 31.3 ms</span><br><span class="line">Detections: 1</span><br><span class="line">  [person        ] conf=0.651  box=[95.5, 381.5, 263.2, 639.5]</span><br><span class="line">==================================================</span><br></pre></td></tr></table></figure>
+<h3 id="5-1-结果分析"><a href="#5-1-结果分析" class="headerlink" title="5.1 结果分析"></a>5.1 结果分析</h3><p><strong>为什么框不准？</strong></p>
+<ol>
+<li><strong>用了 mosaic.avi 而不是 face.mp4</strong>: DMD 的 mosaic 是多视角拼接，人眼看到的分辨率很差，640×640 缩略图中人脸只有几十像素</li>
+<li><strong>YOLOv8-nano COCO 预训练只有 80 个通用类别</strong> (person, car…)，没有 face/hand 专用类</li>
+<li><strong>0.651 的 person 检测可能误检了方向盘/座椅纹理</strong>，不是真正的驾驶员人脸</li>
+</ol>
+<h3 id="5-2-正确的-DMD-推理方案"><a href="#5-2-正确的-DMD-推理方案" class="headerlink" title="5.2 正确的 DMD 推理方案"></a>5.2 正确的 DMD 推理方案</h3><p>DMD 每个 session 已经提供了分离的视频流，不需要在 mosaic 上做目标检测：</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>输入视频</th>
+<th>模型</th>
+<th>任务</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_rgb_face.mp4</code></td>
+<td>SCRFD / RetinaFace</td>
+<td>人脸检测</td>
+</tr>
+<tr>
+<td><code>_rgb_face.mp4</code></td>
+<td>L2CS-Net</td>
+<td>视线估计 (pitch, yaw)</td>
+</tr>
+<tr>
+<td><code>_rgb_hands.mp4</code></td>
+<td>YOLO-hand</td>
+<td>手部检测</td>
+</tr>
+<tr>
+<td><code>_rgb_body.mp4</code></td>
+<td>YOLOv8-cls / MobileNetV3</td>
+<td>分心/疲劳分类</td>
+</tr>
+</tbody>
+</table>
+</div>
+<hr>
+<h2 id="6-后续计划"><a href="#6-后续计划" class="headerlink" title="6. 后续计划"></a>6. 后续计划</h2><ul>
+<li>[ ] 人脸检测: SCRFD / RetinaFace ONNX → OM</li>
+<li>[ ] 视线估计: L2CS-Net ONNX → OM</li>
+<li>[ ] 手部检测: YOLO-hand ONNX → OM</li>
+<li>[ ] 分心/疲劳分类: YOLOv8-cls ONNX → OM</li>
+<li>[ ] 多模型 pipeline 串联</li>
+<li>[ ] 性能分析 (latency, memory, throughput)</li>
+<li>[ ] 论文实验章节</li>
+</ul>
+]]></content>
+      <categories>
+        <category>-edgePerception</category>
+      </categories>
+      <tags>
+        <tag>-Ascend -ACL -YOLO -ONNX -DMD -edgePerception</tag>
+      </tags>
+  </entry>
 </search>
