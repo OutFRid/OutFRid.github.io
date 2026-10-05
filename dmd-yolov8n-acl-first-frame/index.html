@@ -29,14 +29,14 @@
 <meta property="og:description" content="在华为 Atlas 200I DK 上完成 YOLOv8-nano 的 PyTorch → ONNX → OM 转换，并通过 ACL Python API 跑通第一帧推理的完整记录。">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2026-07-19T17:51:54.000Z">
-<meta property="article:modified_time" content="2026-10-05T11:37:04.415Z">
+<meta property="article:modified_time" content="2026-10-05T14:00:32.444Z">
 <meta property="article:author" content="OutFRid">
 <meta property="article:tag" content="Ascend">
+<meta property="article:tag" content="edgePerception">
 <meta property="article:tag" content="ACL">
 <meta property="article:tag" content="YOLO">
 <meta property="article:tag" content="ONNX">
 <meta property="article:tag" content="DMD">
-<meta property="article:tag" content="edgePerception">
 <meta name="twitter:card" content="summary">
 
 <link rel="canonical" href="http://example.com/dmd-yolov8n-acl-first-frame/">
@@ -226,7 +226,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2026-10-05 19:37:04" itemprop="dateModified" datetime="2026-10-05T19:37:04+08:00">2026-10-05</time>
+                <time title="Modified: 2026-10-05 22:00:32" itemprop="dateModified" datetime="2026-10-05T22:00:32+08:00">2026-10-05</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -374,7 +374,10 @@
 <hr>
 <h2 id="5-第一帧推理结果"><a href="#5-第一帧推理结果" class="headerlink" title="5. 第一帧推理结果"></a>5. 第一帧推理结果</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">Video : gA_1_s6_2019-03-08T09;15;15+01;00_rgb_mosaic.avi</span><br><span class="line">        1280x720, 5340 frames, 29.8 fps</span><br><span class="line">Tensor: (1, 3, 640, 640)  float32</span><br><span class="line"></span><br><span class="line">--- ACL Init ---</span><br><span class="line">  OK</span><br><span class="line"></span><br><span class="line">--- Load OM ---</span><br><span class="line">  Inputs  [1]: dims=[[1, 3, 640, 640]]  sizes=[4915200]</span><br><span class="line">  Outputs [1]: dims=[[1, 84, 8400]]  sizes=[2822400]</span><br><span class="line"></span><br><span class="line">--- Infer ---</span><br><span class="line">==================================================</span><br><span class="line">Latency   : 31.3 ms</span><br><span class="line">Detections: 1</span><br><span class="line">  [person        ] conf=0.651  box=[95.5, 381.5, 263.2, 639.5]</span><br><span class="line">==================================================</span><br></pre></td></tr></table></figure>
 
-<h3 id="5-1-结果分析"><a href="#5-1-结果分析" class="headerlink" title="5.1 结果分析"></a>5.1 结果分析</h3><p><strong>为什么框不准？</strong></p>
+<h3 id="5-1-结果分析"><a href="#5-1-结果分析" class="headerlink" title="5.1 结果分析"></a>5.1 结果分析</h3><blockquote>
+<p>⚠️ 本节是 2026-07-20 的初判。2026-10-05 复活环境后复盘发现：<strong>框画歪的主因其实是坐标反变换缺失，见文末 §7</strong>。下面三点只解释了”为什么检测质量不高”，并不能解释”为什么框会整体偏移”。</p>
+</blockquote>
+<p><strong>为什么框不准？</strong></p>
 <ol>
 <li><strong>用了 mosaic.avi 而不是 face.mp4</strong>: DMD 的 mosaic 是多视角拼接，人眼看到的分辨率很差，640×640 缩略图中人脸只有几十像素</li>
 <li><strong>YOLOv8-nano COCO 预训练只有 80 个通用类别</strong> (person, car…)，没有 face&#x2F;hand 专用类</li>
@@ -420,6 +423,47 @@
 <li><input disabled="" type="checkbox"> 性能分析 (latency, memory, throughput)</li>
 <li><input disabled="" type="checkbox"> 论文实验章节</li>
 </ul>
+<hr>
+<h2 id="7-复盘：第一帧框偏移的真正根因（2026-10-05）"><a href="#7-复盘：第一帧框偏移的真正根因（2026-10-05）" class="headerlink" title="7. 复盘：第一帧框偏移的真正根因（2026-10-05）"></a>7. 复盘：第一帧框偏移的真正根因（2026-10-05）</h2><blockquote>
+<p>停摆两个月后复活板端环境，重跑同一 mosaic 首帧，定位到 §5.1 的初判（mosaic 分辨率 &#x2F; 模型类别）<strong>并不是框歪的主因</strong>。真正的原因是推理脚本的<strong>坐标反变换缺失</strong>。</p>
+</blockquote>
+<h3 id="7-1-现象"><a href="#7-1-现象" class="headerlink" title="7.1 现象"></a>7.1 现象</h3><p>初版 person 框 <code>[95.5, 381.5, 263.2, 639.5]</code> 画到 1280×720 原图上，整体偏左下、尺寸偏小，套不住驾驶员。</p>
+<h3 id="7-2-根因（把三个环节串起来看）"><a href="#7-2-根因（把三个环节串起来看）" class="headerlink" title="7.2 根因（把三个环节串起来看）"></a>7.2 根因（把三个环节串起来看）</h3><p>模型输入是 640×640，但原图是 1280×720（16:9）。推理链路里：</p>
+<ol>
+<li><strong>预处理</strong>：<code>cv2.resize(frame, (640, 640))</code> 把 16:9 图<strong>硬拉成正方形</strong>（非等比，而且没记录缩放&#x2F;填充参数）。</li>
+<li><strong>后处理</strong>：YOLO 输出的框是 <strong>640×640 坐标系</strong>里的值，代码原样返回，没做任何换算。</li>
+<li><strong>绘制</strong>：<code>main()</code> 把这些 640 空间的框<strong>直接画到 1280×720 原图</strong>上——两套坐标系不匹配 → 偏移。</li>
+</ol>
+<p>一句话：<strong>框算在 640 空间，却画在 720p 上，中间少了”从模型坐标逆映射回原图坐标”这一步。</strong></p>
+<p>附带一个 bug：<code>cv2.dnn.NMSBoxes</code> 要求 <code>[x, y, w, h]</code>，旧代码喂的却是 <code>[x1, y1, x2, y2]</code>，连 NMS 都是错的。</p>
+<h3 id="7-3-修复"><a href="#7-3-修复" class="headerlink" title="7.3 修复"></a>7.3 修复</h3><ol>
+<li>预处理改 <strong>letterbox</strong>：等比缩放到长边 640、短边居中补灰边（1280×720 → 640×360 + 上下各 140 边），并返回 <code>ratio</code> 与 <code>pad</code>；</li>
+<li>后处理做<strong>逆映射</strong>：<code>x_orig = (x_640 - pad_left) / ratio</code>，再 <code>clip</code> 回原图边界；</li>
+<li>NMS 入参改成 <code>[x, y, w, h]</code>。</li>
+</ol>
+<h3 id="7-4-验证（同一帧）"><a href="#7-4-验证（同一帧）" class="headerlink" title="7.4 验证（同一帧）"></a>7.4 验证（同一帧）</h3><table>
+<thead>
+<tr>
+<th></th>
+<th>person 框</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>修复前</td>
+<td><code>[95.5, 381.5, 263.2, 639.5]</code>（640 空间）</td>
+<td>偏左下、套不准</td>
+</tr>
+<tr>
+<td>修复后</td>
+<td><code>[166.5, 437.0, 523.0, 715.0]</code>（原图空间）</td>
+<td>正确框住驾驶员</td>
+</tr>
+</tbody></table>
+<p>latency 27.1 ms。残留的 <code>tv 0.32</code> 是 COCO 模型对车窗反光的误检，属模型类别限制（见 §5.2，真做 DMS 应换人脸模型 + <code>_rgb_face.mp4</code>），与坐标无关。</p>
+<blockquote>
+<p><strong>教训</strong>：”框不准”先别急着甩锅给数据&#x2F;模型，先查预处理与后处理的坐标变换是否自洽——letterbox 的 <code>ratio/pad</code> 必须在后处理里被精确地逆回来，否则再好的模型也会画出歪框。</p>
+</blockquote>
 
     </div>
 
@@ -430,11 +474,11 @@
       <footer class="post-footer">
           <div class="post-tags">
               <a href="/tags/Ascend/" rel="tag"># Ascend</a>
+              <a href="/tags/edgePerception/" rel="tag"># edgePerception</a>
               <a href="/tags/ACL/" rel="tag"># ACL</a>
               <a href="/tags/YOLO/" rel="tag"># YOLO</a>
               <a href="/tags/ONNX/" rel="tag"># ONNX</a>
               <a href="/tags/DMD/" rel="tag"># DMD</a>
-              <a href="/tags/edgePerception/" rel="tag"># edgePerception</a>
           </div>
 
         
@@ -509,7 +553,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%95%B0%E6%8D%AE%E9%9B%86%E8%A7%A3%E5%8E%8B"><span class="nav-number">1.</span> <span class="nav-text">1. 数据集解压</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-YOLOv8-nano-%E2%86%92-ONNX-%E5%AF%BC%E5%87%BA"><span class="nav-number">2.</span> <span class="nav-text">2. YOLOv8-nano → ONNX 导出</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-ONNX-%E2%86%92-OM-%E7%A6%BB%E7%BA%BF%E6%A8%A1%E5%9E%8B%E7%BC%96%E8%AF%91"><span class="nav-number">3.</span> <span class="nav-text">3. ONNX → OM (离线模型编译)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E6%9D%BF%E7%AB%AF%E7%BC%96%E8%AF%91%EF%BC%88%E5%A4%B1%E8%B4%A5%EF%BC%89"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 板端编译（失败）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-WSL2-%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91%EF%BC%88%E6%88%90%E5%8A%9F%EF%BC%89"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 WSL2 交叉编译（成功）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-ACL-Python-%E6%8E%A8%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">4. ACL Python 推理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-ATC-%E4%B8%8E-ACL"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 ATC 与 ACL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-CANN-7-0-RC1-Python-API-%E5%9D%91-%E9%87%8D%E8%A6%81%EF%BC%81"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 CANN 7.0.RC1 Python API 坑 (重要！)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E5%AE%8C%E6%95%B4%E6%8E%A8%E7%90%86%E6%B5%81%E7%A8%8B"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 完整推理流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E7%AC%AC%E4%B8%80%E5%B8%A7%E6%8E%A8%E7%90%86%E7%BB%93%E6%9E%9C"><span class="nav-number">5.</span> <span class="nav-text">5. 第一帧推理结果</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E7%BB%93%E6%9E%9C%E5%88%86%E6%9E%90"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 结果分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%AD%A3%E7%A1%AE%E7%9A%84-DMD-%E6%8E%A8%E7%90%86%E6%96%B9%E6%A1%88"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 正确的 DMD 推理方案</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E5%90%8E%E7%BB%AD%E8%AE%A1%E5%88%92"><span class="nav-number">6.</span> <span class="nav-text">6. 后续计划</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%95%B0%E6%8D%AE%E9%9B%86%E8%A7%A3%E5%8E%8B"><span class="nav-number">1.</span> <span class="nav-text">1. 数据集解压</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-YOLOv8-nano-%E2%86%92-ONNX-%E5%AF%BC%E5%87%BA"><span class="nav-number">2.</span> <span class="nav-text">2. YOLOv8-nano → ONNX 导出</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-ONNX-%E2%86%92-OM-%E7%A6%BB%E7%BA%BF%E6%A8%A1%E5%9E%8B%E7%BC%96%E8%AF%91"><span class="nav-number">3.</span> <span class="nav-text">3. ONNX → OM (离线模型编译)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E6%9D%BF%E7%AB%AF%E7%BC%96%E8%AF%91%EF%BC%88%E5%A4%B1%E8%B4%A5%EF%BC%89"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 板端编译（失败）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-WSL2-%E4%BA%A4%E5%8F%89%E7%BC%96%E8%AF%91%EF%BC%88%E6%88%90%E5%8A%9F%EF%BC%89"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 WSL2 交叉编译（成功）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-ACL-Python-%E6%8E%A8%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">4. ACL Python 推理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-ATC-%E4%B8%8E-ACL"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 ATC 与 ACL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-CANN-7-0-RC1-Python-API-%E5%9D%91-%E9%87%8D%E8%A6%81%EF%BC%81"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 CANN 7.0.RC1 Python API 坑 (重要！)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-%E5%AE%8C%E6%95%B4%E6%8E%A8%E7%90%86%E6%B5%81%E7%A8%8B"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 完整推理流程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E7%AC%AC%E4%B8%80%E5%B8%A7%E6%8E%A8%E7%90%86%E7%BB%93%E6%9E%9C"><span class="nav-number">5.</span> <span class="nav-text">5. 第一帧推理结果</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-%E7%BB%93%E6%9E%9C%E5%88%86%E6%9E%90"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 结果分析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-%E6%AD%A3%E7%A1%AE%E7%9A%84-DMD-%E6%8E%A8%E7%90%86%E6%96%B9%E6%A1%88"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 正确的 DMD 推理方案</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E5%90%8E%E7%BB%AD%E8%AE%A1%E5%88%92"><span class="nav-number">6.</span> <span class="nav-text">6. 后续计划</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E5%A4%8D%E7%9B%98%EF%BC%9A%E7%AC%AC%E4%B8%80%E5%B8%A7%E6%A1%86%E5%81%8F%E7%A7%BB%E7%9A%84%E7%9C%9F%E6%AD%A3%E6%A0%B9%E5%9B%A0%EF%BC%882026-10-05%EF%BC%89"><span class="nav-number">7.</span> <span class="nav-text">7. 复盘：第一帧框偏移的真正根因（2026-10-05）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#7-1-%E7%8E%B0%E8%B1%A1"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 现象</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-2-%E6%A0%B9%E5%9B%A0%EF%BC%88%E6%8A%8A%E4%B8%89%E4%B8%AA%E7%8E%AF%E8%8A%82%E4%B8%B2%E8%B5%B7%E6%9D%A5%E7%9C%8B%EF%BC%89"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 根因（把三个环节串起来看）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-3-%E4%BF%AE%E5%A4%8D"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 修复</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#7-4-%E9%AA%8C%E8%AF%81%EF%BC%88%E5%90%8C%E4%B8%80%E5%B8%A7%EF%BC%89"><span class="nav-number">7.4.</span> <span class="nav-text">7.4 验证（同一帧）</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
