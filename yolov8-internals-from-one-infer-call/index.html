@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 7.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Pisces","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":true,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":5,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="以昇腾板端一行 &#96;outputs &#x3D; model.run([tensor])&#96; 为线索，逐层拆清 ACL init&#x2F;load 的资源层级、卷积通道的来源、Backbone&#x2F;Neck&#x2F;Head 分工、anchor-free 检测头，以及输出张量 [1,84,8400] 里 84 和 8400 是怎么从 3×640×640 一步步算出来的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从一行推理脚本读懂 YOLOv8 内部机制 —— ACL 加载、卷积通道与 84×8400 的来历">
+<meta property="og:url" content="http://example.com/yolov8-internals-from-one-infer-call/index.html">
+<meta property="og:site_name" content="OutFRid&#39;s Blog">
+<meta property="og:description" content="以昇腾板端一行 &#96;outputs &#x3D; model.run([tensor])&#96; 为线索，逐层拆清 ACL init&#x2F;load 的资源层级、卷积通道的来源、Backbone&#x2F;Neck&#x2F;Head 分工、anchor-free 检测头，以及输出张量 [1,84,8400] 里 84 和 8400 是怎么从 3×640×640 一步步算出来的。">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-11-01T02:30:00.000Z">
+<meta property="article:modified_time" content="2026-11-01T14:48:21.954Z">
+<meta property="article:author" content="OutFRid">
+<meta property="article:tag" content="Ascend">
+<meta property="article:tag" content="ACL">
+<meta property="article:tag" content="YOLO">
+<meta property="article:tag" content="CNN">
+<meta property="article:tag" content="学习笔记">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://example.com/yolov8-internals-from-one-infer-call/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'en'
+  };
+</script>
+
+  <title>从一行推理脚本读懂 YOLOv8 内部机制 —— ACL 加载、卷积通道与 84×8400 的来历 | OutFRid's Blog</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="OutFRid's Blog" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">OutFRid's Blog</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">个人技术博客</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="Searching..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/OutFRid/OutFRid.github.io" class="github-corner" title="see source code" aria-label="see source code" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/yolov8-internals-from-one-infer-call/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="OutFRid">
+      <meta itemprop="description" content="用于个人复习、成果展示">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="OutFRid's Blog">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          从一行推理脚本读懂 YOLOv8 内部机制 —— ACL 加载、卷积通道与 84×8400 的来历
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2026-11-01 10:30:00 / Modified: 22:48:21" itemprop="dateCreated datePublished" datetime="2026-11-01T10:30:00+08:00">2026-11-01</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/edgePerception/" itemprop="url" rel="index"><span itemprop="name">edgePerception</span></a>
+                </span>
+            </span>
+
+          
+            <div class="post-description">以昇腾板端一行 `outputs = model.run([tensor])` 为线索，逐层拆清 ACL init/load 的资源层级、卷积通道的来源、Backbone/Neck/Head 分工、anchor-free 检测头，以及输出张量 [1,84,8400] 里 84 和 8400 是怎么从 3×640×640 一步步算出来的。</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>线索代码：昇腾板端推理脚本 <code>infer_yolo_acl.py</code> 里的一行 <code>outputs = model.run([tensor])</code><br>目标：不看结论，把 <code>outputs[0]</code> 那个 <code>[1, 84, 8400]</code> 的每一个数字，从最初的 <code>3×640×640</code> 输入推出来</p>
+</blockquote>
+<hr>
+<h2 id="0-主线概览"><a href="#0-主线概览" class="headerlink" title="0. 主线概览"></a>0. 主线概览</h2><p>一次调用的输入输出极其简单：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">tensor  = preprocess(frame)      <span class="comment"># 一张图 → [1, 3, 640, 640] 的 float32</span></span><br><span class="line">outputs = model.run([tensor])    <span class="comment"># 送进 NPU</span></span><br><span class="line">outputs[<span class="number">0</span>].shape                 <span class="comment"># → [1, 84, 8400]</span></span><br></pre></td></tr></table></figure>
+
+<p>但这一行背后串着五个层层递进的问题，本文按这个顺序讲：</p>
+<ol>
+<li><strong>运行时</strong>：为什么 <code>load om</code> 之前必须先 <code>init</code> 三连？（ACL 的资源层级）</li>
+<li><strong>模型形态</strong>：为什么这块 <code>.om</code> 只吃一张图像 tensor，没有其他参数？（编译期固化）</li>
+<li><strong>数据流水线</strong>：卷积把 <code>3</code> 个通道怎么变成几十个通道？<code>Conv2d</code> 的 in&#x2F;out&#x2F;k 是什么？</li>
+<li><strong>网络结构</strong>：Backbone &#x2F; Neck &#x2F; Head 各管什么，边界在哪？</li>
+<li><strong>核心推导</strong>：<code>8400</code> 和 <code>84</code> 到底怎么算出来的，每个格点又如何”预测一个框”？</li>
+</ol>
+<p>一句话贯穿始终：</p>
+<blockquote>
+<p><strong><code>.om</code> 是”编译期产物”——形状、输入个数、类别数在 ATC 那一刻全部烧死；ACL 运行时和推理脚本只是”忠实读出并执行”这张图的自描述，对它内容一无所知。</strong></p>
+</blockquote>
+<hr>
+<h2 id="1-为什么-load-之前必须先-init（ACL-的资源层级）"><a href="#1-为什么-load-之前必须先-init（ACL-的资源层级）" class="headerlink" title="1. 为什么 load 之前必须先 init（ACL 的资源层级）"></a>1. 为什么 load 之前必须先 init（ACL 的资源层级）</h2><p><code>AclContext</code> 里那三行不是走过场，是在<strong>逐级搭建驱动侧的执行环境</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">acl.init(&quot;&quot;)        →  acl.rt.set_device(0)  →  acl.rt.create_context(0)  →  acl.mdl.load_from_file(...)</span><br><span class="line">（进程级运行时环境）    （绑定到具体芯片）        （执行上下文 / 会话）        （模型 DMA 下载进设备）</span><br></pre></td></tr></table></figure>
+
+<p>每一层都依赖上一层提供的句柄&#x2F;资源，是严格父子关系：</p>
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>干什么</th>
+<th>少了它会怎样</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>acl.init</code></td>
+<td>加载 ACL 运行时配置、打开与昇腾驱动的通道、枚举设备</td>
+<td><code>acl</code> 模块只是空函数指针，调任何接口都报”未初始化”</td>
+</tr>
+<tr>
+<td><code>set_device(0)</code></td>
+<td>声明”后续操作都对着 0 号 NPU”</td>
+<td>多卡时不知道模型下载到哪张卡</td>
+</tr>
+<tr>
+<td><code>create_context(0)</code></td>
+<td>建立执行”会话”：独立内存池、默认 stream、设备访问权限；<strong>绑定创建它的线程</strong></td>
+<td>模型没有内存池和 stream 可挂载</td>
+</tr>
+<tr>
+<td><code>load_from_file</code></td>
+<td>把图结构+权重 <strong>DMA 下载</strong>到设备内存、实例化算子、分配 workspace&#x2F;输出缓存</td>
+<td>环境不存在，模型无处可放</td>
+</tr>
+</tbody></table>
+<h3 id="为什么-init-必须”手动声明”，不会自动发生"><a href="#为什么-init-必须”手动声明”，不会自动发生" class="headerlink" title="为什么 init 必须”手动声明”，不会自动发生"></a>为什么 init 必须”手动声明”，不会自动发生</h3><ul>
+<li><strong>ACL 是 C 风格 HAL 库，Python 只是薄绑定</strong>：<code>import acl</code> 拿到的是裸 API，没有”import 即初始化”的副作用。用哪个配置文件、用第几号设备、context 建在哪个线程——这些运行时<strong>不可能替你猜</strong>，所以不提供懒加载。</li>
+<li><strong>释放顺序敏感，GC 靠不住</strong>：销毁必须严格逆序 <code>unload model → destroy context → reset device → finalize</code>。靠 <code>__del__</code>&#x2F;GC 自动回收，析构顺序不确定，会崩。所以脚本末尾是<strong>手动</strong> <code>model.destroy()</code> 再 <code>ctx.destroy()</code>。</li>
+</ul>
+<blockquote>
+<p>类比 CUDA：<code>cuInit → cuDeviceGet → cuCtxCreate → cuModuleLoad</code>；类比普通文件：先有文件系统和打开的句柄，才能读内容。</p>
+</blockquote>
+<hr>
+<h2 id="2-om-为什么只吃一张图像-tensor"><a href="#2-om-为什么只吃一张图像-tensor" class="headerlink" title="2. .om 为什么只吃一张图像 tensor"></a>2. <code>.om</code> 为什么只吃一张图像 tensor</h2><p>很多人以为 <code>.om</code>&#x2F;ACL “规定”了只能输入图像——恰恰相反，<strong>“单输入、640×640、一个 float32 图像”是这条导出链决定的，不是格式规定的</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ultralytics export(opset=11, imgsz=640) → yolov8n.onnx → ATC 编译 → yolov8n.om</span><br></pre></td></tr></table></figure>
+
+<p>脚本里没有硬编码”必须是图像”，全部是运行时从模型自描述读出来的：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>.num_inputs  = acl.mdl.get_num_inputs(desc)     <span class="comment"># 这个模型恰好是 1</span></span><br><span class="line"><span class="variable language_">self</span>.input_sizes = acl.mdl.get_input_size_by_index  <span class="comment"># 恰好 1*3*640*640*4 字节</span></span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>model.run([tensor])</code> 的入参是 <strong>list</strong>，本来就是多输入通用的：Siamese 双路、音频频谱、点云、LLM embedding，对 ACL 都只是一块指定字节数的 buffer，它不知道也不关心里面是不是像素。</li>
+<li><strong>阈值、NMS 这类”旋钮”为什么不在模型里</strong>：<code>.om</code> 是纯数值数据流图（固定输入 → 固定输出，中间无运行时可变参数）。<code>conf=0.25</code>、<code>iou=0.45</code> 刻意留在 host 侧后处理里，改阈值不用重编模型。</li>
+<li><strong>“只允许 640”是默认而非天花板</strong>：ATC 默认按静态 shape 编译，喂别的尺寸会在 size 校验处抛 <code>size mismatch</code>（这正是脚本用 letterbox 把任意分辨率补齐到 640 的原因）。但昇腾也支持 <code>--dynamic_input</code> 多档、分档编译，所以”限制”只是这一份编译产物的选择。</li>
+</ul>
+<hr>
+<h2 id="3-卷积与通道：3-怎么变成几十个通道"><a href="#3-卷积与通道：3-怎么变成几十个通道" class="headerlink" title="3. 卷积与通道：3 怎么变成几十个通道"></a>3. 卷积与通道：<code>3</code> 怎么变成几十个通道</h2><p>这是理解后面的地基。</p>
+<h3 id="3-1-输入的-3-就是”通道”"><a href="#3-1-输入的-3-就是”通道”" class="headerlink" title="3.1 输入的 3 就是”通道”"></a>3.1 输入的 <code>3</code> 就是”通道”</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">BGR 图 = 形状 [3, 640, 640] 的三维块</span><br><span class="line">       = 3 张 640×640 平面叠在一起（平面0=B, 平面1=G, 平面2=R）</span><br></pre></td></tr></table></figure>
+
+<p><strong>“通道”就是”叠了几层”的意思</strong>。此时通道数 &#x3D; 3，因为 RGB 天生三分量。问题是：这个 3 后来怎么变 32&#x2F;64&#x2F;128&#x2F;256？</p>
+<h3 id="3-2-唯一规则：输出通道数-这一层放了多少个卷积核"><a href="#3-2-唯一规则：输出通道数-这一层放了多少个卷积核" class="headerlink" title="3.2 唯一规则：输出通道数 &#x3D; 这一层放了多少个卷积核"></a>3.2 唯一规则：输出通道数 &#x3D; 这一层放了多少个卷积核</h3><p>一个卷积层做的事一句话：<strong>“准备 K 个探针（卷积核），每个探针在整张图上滑一遍、每处打一个分得到一张平面；K 个探针 → K 张平面 → 叠成 K 通道输出。”</strong></p>
+<p>关键：<strong>核的深度维是用来”吃掉”输入通道的，不产生新通道</strong>。在每个位置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">覆盖的小块 3×3×3 = 27 个数</span><br><span class="line">核权重     3×3×3 = 27 个数</span><br><span class="line">逐位相乘再全部求和 → 1 个标量   ← 3 个通道的信息在这里被熔掉了</span><br></pre></td></tr></table></figure>
+
+<p>一个核 &#x3D; 一张平面 <code>[1, H, W]</code>；K 个核 &#x3D; <code>[K, H, W]</code>。<strong>输出通道数只由”这层放了几个核”决定，和输入通道数无关。</strong></p>
+<h3 id="3-3-Conv2d-in-32-out-64-k-3-各参数"><a href="#3-3-Conv2d-in-32-out-64-k-3-各参数" class="headerlink" title="3.3 Conv2d(in=32, out=64, k=3) 各参数"></a>3.3 <code>Conv2d(in=32, out=64, k=3)</code> 各参数</h3><table>
+<thead>
+<tr>
+<th>参数</th>
+<th>含义</th>
+<th>决定什么</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>in_channels&#x3D;32</td>
+<td>输入有 32 通道</td>
+<td>每个核必须是 32×k×k（深度对齐，硬约束）</td>
+</tr>
+<tr>
+<td>out_channels&#x3D;64</td>
+<td>这层放 64 个核</td>
+<td>输出 64 通道，<strong>唯一由设计者自由决定的数</strong></td>
+</tr>
+<tr>
+<td>kernel_size&#x3D;3</td>
+<td>核空间尺寸 3×3</td>
+<td>单视野&#x2F;感受野大小</td>
+</tr>
+<tr>
+<td>stride</td>
+<td>每滑几步取一个位置</td>
+<td>&#x3D;2 时尺寸减半（下采样的真正来源）</td>
+</tr>
+<tr>
+<td>padding</td>
+<td>四周补 0</td>
+<td>抵消 <code>-k+1</code> 的尺寸损失，保持同尺寸</td>
+</tr>
+</tbody></table>
+<p>参数量：<code>64 × (32×3×3) + 64(bias) = 18496</code>；框架内部把这堆权重存成四维张量 <code>(out=64, in=32, kh=3, kw=3)</code>。</p>
+<blockquote>
+<p>每个核具体长什么样（学成”检测横线”还是”纹理”）是<strong>训练时梯度下降自己学的</strong>，人没指定；设计者只决定”设几个核”。</p>
+</blockquote>
+<h3 id="3-4-为什么叫-Conv2D：看滑动轴，不看数据维数"><a href="#3-4-为什么叫-Conv2D：看滑动轴，不看数据维数" class="headerlink" title="3.4 为什么叫 Conv2D：看滑动轴，不看数据维数"></a>3.4 为什么叫 Conv<strong>2</strong>D：看滑动轴，不看数据维数</h3><p><code>Conv*d</code> 里的 <code>d</code> &#x3D; <strong>卷积窗口”滑动”的空间轴个数</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>滑动轴</th>
+<th>典型数据</th>
+<th>权重张量 rank</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Conv1d</td>
+<td>1（时间&#x2F;序列）</td>
+<td>音频、文本</td>
+<td>3 维 (out,in,k)</td>
+</tr>
+<tr>
+<td><strong>Conv2d</strong></td>
+<td><strong>2（高、宽）</strong></td>
+<td><strong>图像</strong></td>
+<td>4 维 (out,in,kh,kw)</td>
+</tr>
+<tr>
+<td>Conv3d</td>
+<td>3（高、宽、帧&#x2F;深）</td>
+<td>视频、CT 体数据</td>
+<td>5 维</td>
+</tr>
+</tbody></table>
+<p>图像数据虽是三维张量 <code>[C,H,W]</code>，但只有 H、W 两个轴在滑，C 是被”就地熔化”的深度、不计入巡逻维度 → 所以叫 Conv2d。<strong><code>d</code> ≠ 张量 rank</strong>。</p>
+<h3 id="3-5-尺寸与通道沿-backbone-的走势"><a href="#3-5-尺寸与通道沿-backbone-的走势" class="headerlink" title="3.5 尺寸与通道沿 backbone 的走势"></a>3.5 尺寸与通道沿 backbone 的走势</h3><p>backbone 里穿插 stride&#x3D;2 卷积做下采样，空间与通道反向变化：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">输入      [3,   640, 640]   空间最大，通道最少</span><br><span class="line">  ↓ 连续 stride-2</span><br><span class="line">P3       [·,    80,  80]    ÷8    ← 细粒度，管小目标</span><br><span class="line">P4       [·,    40,  40]    ÷16   ← 中目标</span><br><span class="line">P5       [·,    20,  20]    ÷32   ← 语义强，一个点覆盖大范围</span><br></pre></td></tr></table></figure>
+
+<p>越深的地方要同时跟踪的”概念”越多 → 通道数一路上涨。取某个格子位置竖切一刀得到的那根 C 维向量，就是它”看到的局部世界摘要”，也是第 5 节的起点。</p>
+<hr>
+<h2 id="4-Backbone-Neck-Head：网络的三大块"><a href="#4-Backbone-Neck-Head：网络的三大块" class="headerlink" title="4. Backbone &#x2F; Neck &#x2F; Head：网络的三大块"></a>4. Backbone &#x2F; Neck &#x2F; Head：网络的三大块</h2><p>概念上是三大块，”背—颈—头”接起来：</p>
+<table>
+<thead>
+<tr>
+<th>块</th>
+<th>职责</th>
+<th>输出</th>
+<th>是否随任务变</th>
+<th>算力占比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Backbone</strong>（骨干）</td>
+<td>“看懂”：把像素加工成语义特征图</td>
+<td>抽象特征 P3&#x2F;P4&#x2F;P5</td>
+<td>不变，最耗算力</td>
+<td>绝大部分</td>
+</tr>
+<tr>
+<td><strong>Neck</strong>（颈）</td>
+<td>“串”：跨尺度融合浅层细节+深层语义</td>
+<td>融合后的多尺度特征</td>
+<td>基本不变</td>
+<td>小</td>
+</tr>
+<tr>
+<td><strong>Head</strong>（头）</td>
+<td>“答题”：把特征翻译成任务答案</td>
+<td>检测框&#x2F;类别</td>
+<td><strong>变，且很轻</strong></td>
+<td>很小</td>
+</tr>
+</tbody></table>
+<p>补充：</p>
+<ul>
+<li><strong>Stem</strong>：backbone 最前端起手的几层卷积下采样（640→320），通常算进 backbone 不单列。</li>
+<li><strong>SPPF</strong>（空间金字塔池化）：backbone 末端一步，用几种核大小各池化再拼接，扩大感受野。</li>
+<li><strong>Loss head &#x2F; 辅助头</strong>：只存在于训练阶段，导出的 <code>.om</code> 里根本没有，推理时不存在。</li>
+<li><strong>网络之外</strong>：前处理（letterbox&#x2F;归一化）在 CPU，后处理（NMS&#x2F;阈值&#x2F;坐标逆映射）也在 CPU。</li>
+</ul>
+<p><strong>一个诚实的边界问题</strong>：Neck 和 Head 在不同框架里会糊在一起。在 ultralytics 源码里 <code>Detect</code> 模块把”Neck（P3&#x2F;P4&#x2F;P5 上下采样 concat 融合）”和”Head（每层那个 1×1 卷积）”打包进同一个类，所以 yaml 里只看到 <code>Detect</code> 一个名字，看起来像两大块；但概念上 Neck 确实存在。</p>
+<p>落到本项目：Backbone + Neck + Head 全部烧进 <code>yolov8n.om</code> 跑在 NPU 上；脚本里的 <code>preprocess</code>&#x2F;<code>postprocess</code> 是照着 ultralytics 逻辑用 cv2+numpy <strong>手抄重写</strong>的（故意不依赖 torch，避免把几百 MB 推理栈的开销混进被测数据）。</p>
+<p><strong>结构 vs 实现的归属</strong>：<code>nn.Conv2d</code> 是框架级通用积木（PyTorch 的），ultralytics 的 <code>Conv</code> 是它的封装习惯，<code>yolov8.yaml</code> 里那串缩放系数 + 通道&#x2F;层数才是 YOLOv8 的设计，而这些数字最终被 ATC 烧进 <code>.om</code>。本项目的推理脚本对结构<strong>零改动</strong>，全是运行时”读出”。</p>
+<hr>
+<h2 id="5-anchor-free-与-P3-P4-P5"><a href="#5-anchor-free-与-P3-P4-P5" class="headerlink" title="5. anchor-free 与 P3&#x2F;P4&#x2F;P5"></a>5. anchor-free 与 P3&#x2F;P4&#x2F;P5</h2><h3 id="5-1-P3-P4-P5-特征金字塔（FPN）"><a href="#5-1-P3-P4-P5-特征金字塔（FPN）" class="headerlink" title="5.1 P3&#x2F;P4&#x2F;P5 &#x3D; 特征金字塔（FPN）"></a>5.1 P3&#x2F;P4&#x2F;P5 &#x3D; 特征金字塔（FPN）</h3><p>命名规则极简：<strong>下采样多少倍就叫 P 几</strong>。P3&#x3D;÷8、P4&#x3D;÷16、P5&#x3D;÷32。三层一起检测的理由：只在 P5 上，远处小行人不到半个格子细节全丢；只在 P3 上，占满画面的卡车超出单点表达力。于是约定 P3 管小目标、P4 中、P5 大。</p>
+<h3 id="5-2-anchor-free-在反对什么"><a href="#5-2-anchor-free-在反对什么" class="headerlink" title="5.2 anchor-free 在反对什么"></a>5.2 anchor-free 在反对什么</h3><p><strong>传统 anchor-based</strong>（Faster R-CNN &#x2F; SSD &#x2F; YOLOv5 及以前）：每格预先绑 9 个手工设定的”锚框”，网络输出的是”把某号锚框挪 dx、放大 sw”的<strong>偏移量</strong>。代价：锚框尺寸是超参数、换数据集要重新聚类适配；匹配规则全是手工调参；每格预测头数量膨胀 9 倍且大量废框。</p>
+<p><strong>anchor-free</strong>（YOLOv8&#x2F;YOLOX&#x2F;CenterNet）：回到最朴素问法——“你这格中心是不是某物体的中心？如果是，这物体 w、h 是多少？”每格只预测 <strong>1 个框</strong>（输出 4+类别数，而非 <code>3×9×(4+类别)</code>），真值框中心落进哪格哪格就负责。代价：一个物体只能由中心所在格负责，对长条状&#x2F;中心模糊的物体表达不如多锚框灵活。</p>
+<blockquote>
+<p>注意：<strong>8400×84 这套数字跟 anchor-free 无关</strong>——anchor-based 也有多尺度网格，只是每格数字更多、形状不同。</p>
+</blockquote>
+<hr>
+<h2 id="6-核心推导：84-和-8400-怎么从-3×640×640-算出来"><a href="#6-核心推导：84-和-8400-怎么从-3×640×640-算出来" class="headerlink" title="6. 核心推导：84 和 8400 怎么从 3×640×640 算出来"></a>6. 核心推导：84 和 8400 怎么从 3×640×640 算出来</h2><h3 id="结论公式"><a href="#结论公式" class="headerlink" title="结论公式"></a>结论公式</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">8400 = 80² (P3) + 40² (P4) + 20² (P5)</span><br><span class="line">84   = 4 (框参数) + 80 (COCO 类别数)</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-1-8400-——-纯空间尺寸的下采样流水"><a href="#6-1-8400-——-纯空间尺寸的下采样流水" class="headerlink" title="6.1 8400 —— 纯空间尺寸的下采样流水"></a>6.1 8400 —— 纯空间尺寸的下采样流水</h3><p>唯一规则：<strong>backbone 里每个 <code>stride=2</code> 卷积把 H、W 各砍一半</strong>（通道怎么变与此无关，这里只盯尺寸）：</p>
+<table>
+<thead>
+<tr>
+<th>层</th>
+<th>stride</th>
+<th>尺寸</th>
+<th>累计倍率</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>输入</td>
+<td>—</td>
+<td>640×640</td>
+<td>×1</td>
+</tr>
+<tr>
+<td>L0 Conv</td>
+<td>2</td>
+<td>320</td>
+<td>÷2</td>
+</tr>
+<tr>
+<td>L1 Conv</td>
+<td>2</td>
+<td>160</td>
+<td>÷4</td>
+</tr>
+<tr>
+<td>L3 Conv</td>
+<td>2</td>
+<td><strong>80</strong></td>
+<td>÷8  ← P3</td>
+</tr>
+<tr>
+<td>L5 Conv</td>
+<td>2</td>
+<td><strong>40</strong></td>
+<td>÷16 ← P4</td>
+</tr>
+<tr>
+<td>L7 Conv</td>
+<td>2</td>
+<td><strong>20</strong></td>
+<td>÷32 ← P5</td>
+</tr>
+</tbody></table>
+<p>（中间 C2f&#x2F;SPPF 的 stride&#x3D;1，尺寸不动。）所以：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">P3 = 640/8 = 80,  P4 = 640/16 = 40,  P5 = 640/32 = 20</span><br><span class="line">每格预测一个框 →  80×80 + 40×40 + 20×20 = 6400 + 1600 + 400 = 8400</span><br></pre></td></tr></table></figure>
+
+<p><strong>8400 只由 640 决定</strong>：换 320 输入就变 <code>40²+20²+10² = 2100</code>。</p>
+<h3 id="6-2-84-——-每个格点要填几个数"><a href="#6-2-84-——-每个格点要填几个数" class="headerlink" title="6.2 84 —— 每个格点要填几个数"></a>6.2 84 —— 每个格点要填几个数</h3><p>固定看某一个格子，它的输出由两组拼成：</p>
+<ul>
+<li><strong>4 个框几何量</strong>：一个矩形框最少需要 <code>cx, cy, w, h</code> 四个自由度。这是几何常数，与输入尺寸无关。（实现上是”从格子中心向四条边量出的距离 l,t,r,b”，坐标原点由格子位置免费提供，反算加减放在 host 侧后处理。）</li>
+<li><strong>80 个类别分</strong>：COCO 有 80 类，每类一个独立 sigmoid 分数。<strong>80 完全来自数据集类别数</strong>——换”人+车”两类，84 立刻变 4+2&#x3D;6，输出变 <code>[1, 6, 8400]</code>。</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">84 = 4 (cx,cy,w,h) + 80 (COCO 类别)</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-拼成-1-84-8400"><a href="#6-3-拼成-1-84-8400" class="headerlink" title="6.3 拼成 [1, 84, 8400]"></a>6.3 拼成 [1, 84, 8400]</h3><table>
+<thead>
+<tr>
+<th>维度</th>
+<th>值</th>
+<th>来源</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>batch</td>
+<td>1</td>
+<td>导出时定 <code>batch=1</code></td>
+</tr>
+<tr>
+<td>特征</td>
+<td>84</td>
+<td>每格 4 框 + 80 类</td>
+</tr>
+<tr>
+<td>格点</td>
+<td>8400</td>
+<td>P3&#x2F;P4&#x2F;P5 格子数之和（源自 640）</td>
+</tr>
+</tbody></table>
+<p>三档 8400 格的 84 维向量堆起 → <code>[1, 8400, 84]</code>，导出时转置成 <code>[1, 84, 8400]</code>（这也是后处理开头要 <code>squeeze</code> 去 batch、再 <code>transpose</code> 回 <code>[8400, 84]</code> 才好按列取 <code>[:, :4]</code>&#x2F;<code>[:, 4:]</code> 的原因）。三个数字来源彼此独立：<strong>改输入只动 8400，改类别只动 84，改 batch 只动最前面那个 1</strong>。</p>
+<hr>
+<h2 id="7-一个格点如何”预测一个框”"><a href="#7-一个格点如何”预测一个框”" class="headerlink" title="7. 一个格点如何”预测一个框”"></a>7. 一个格点如何”预测一个框”</h2><p>心智模型：<strong>格点 &#x3D; 一根一维特征向量；head 把这根向量翻译成 84 个数</strong>。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">特征图 [C, 80, 80]，取位置 (i,j) 竖切 → 一根 C 维向量 [a₁,...,a_C]   （该格局部摘要）</span><br></pre></td></tr></table></figure>
+
+<p>head 对每根向量做<strong>一次线性映射</strong>（即 1×1 卷积），实际是<strong>两个并行 1×1 卷积</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">             ┌─→ 框回归卷积 (out=4)  → [b₁,b₂,b₃,b₄]</span><br><span class="line">一根 C 维向量 ┤</span><br><span class="line">             └─→ 分类卷积   (out=80) → [s₁,...,s₈₀]</span><br><span class="line">                     concat → [84 维] = 这一格的一个候选框</span><br></pre></td></tr></table></figure>
+
+<p><strong>最关键的一点</strong>：这 8400 根向量<strong>共用同一对权重</strong>——这就是为什么参数量小、为什么叫”卷积”而不是”8400 个独立全连接”。head 学的不是”第 37 号格子的框”，而是”<strong>任何一格该怎样从它的摘要生成自己的框</strong>“这一条通用法则。</p>
+<p>进阶：框分支内部先吐 <code>4×reg_max</code>（默认 16）个分布值，再由 <strong>DFL</strong> 算子各压成 1 个期望值，对外仍是每格 4 个几何量；DFL 在导出时已烧进 <code>.om</code>，所以输出层只看到 84 而非 <code>4×16+80</code>。</p>
+<hr>
+<h2 id="8-全链路一图流（每个数字都有出处）"><a href="#8-全链路一图流（每个数字都有出处）" class="headerlink" title="8. 全链路一图流（每个数字都有出处）"></a>8. 全链路一图流（每个数字都有出处）</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">3×640×640  输入 tensor</span><br><span class="line">   │ [网络内 · NPU · yolov8n.om]</span><br><span class="line">   ├─ Backbone：连续 stride-2 → ÷8→80, ÷16→40, ÷32→20（末端 SPPF 扩感受野）</span><br><span class="line">   ├─ Neck(Detect)：P3/P4/P5 双向融合</span><br><span class="line">   └─ Head(Detect)：每格 两个 1×1 卷积 → 4(框)+80(类)=84</span><br><span class="line">        P3 80×80=6400 + P4 40×40=1600 + P5 20×20=400 = 8400 格</span><br><span class="line">   → outputs[0] = [1, 84, 8400]</span><br><span class="line">   │ [网络外 · CPU · 手写后处理]</span><br><span class="line">   └─ postprocess：阈值筛 → NMS → 逆 letterbox 坐标映射 → 最终 detections</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>8400</code> ← 只跟 640 有关（尺寸平方相加）</li>
+<li><code>84 = 4 + 80</code> ← 4 是框的几何自由度（常数），80 是 COCO 类别数（数据集）</li>
+<li><code>1</code> ← 编译时定的 batch</li>
+</ul>
+<hr>
+<h2 id="9-术语速查"><a href="#9-术语速查" class="headerlink" title="9. 术语速查"></a>9. 术语速查</h2><table>
+<thead>
+<tr>
+<th>术语</th>
+<th>一句话</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ACL init 三连</td>
+<td><code>init → set_device → create_context</code>，逐级搭驱动侧执行环境，load 才能把模型放进去</td>
+</tr>
+<tr>
+<td><code>.om</code></td>
+<td>ATC 编译产物，形状&#x2F;输入数&#x2F;dtype 全部<strong>编译期固化</strong>，运行时只读不自变</td>
+</tr>
+<tr>
+<td>通道</td>
+<td>张量”叠了几层”；输出通道数 &#x3D; 这层放了多少个卷积核</td>
+</tr>
+<tr>
+<td>Conv2d 的 in&#x2F;out&#x2F;k</td>
+<td>输入通道数（硬约束）&#x2F; 核个数&#x3D;输出通道（可自由设计）&#x2F; 核空间尺寸</td>
+</tr>
+<tr>
+<td>P3&#x2F;P4&#x2F;P5</td>
+<td>从输入下采样 ÷8&#x2F;÷16&#x2F;÷32 的三档特征图，分别管小&#x2F;中&#x2F;大目标</td>
+</tr>
+<tr>
+<td>anchor-free</td>
+<td>每格直接回归 1 个框（无参考锚框），真值中心落进哪格哪格负责</td>
+</tr>
+<tr>
+<td>Backbone&#x2F;Neck&#x2F;Head</td>
+<td>提特征 &#x2F; 跨尺度融合 &#x2F; 出答案；YOLOv8 把 Neck+Head 合成 <code>Detect</code></td>
+</tr>
+<tr>
+<td>letterbox</td>
+<td>保比例缩放到 640 并补灰边，让静态 shape 的 <code>.om</code> 能吃任意分辨率</td>
+</tr>
+<tr>
+<td>DFL</td>
+<td>把框分支的距离分布积分成 4 个几何值的内部技巧，已烧进 <code>.om</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="10-自测问题"><a href="#10-自测问题" class="headerlink" title="10. 自测问题"></a>10. 自测问题</h2><ol>
+<li>为什么 <code>acl.mdl.load_from_file</code> 不能在 <code>acl.init</code> 之前调用？load 具体向设备做了哪些事？</li>
+<li>同一块 <code>outputs[0]</code> buffer，按 <code>[1,84,8400]</code> 读和按 <code>[1,8400,84]</code> 读，数值一样但含义不同——这说明了 <code>.om</code> 输出张量的什么性质？</li>
+<li>把一个 YOLOv8n 改成”只检测人、车两类”并以 320×320 输入重新导出，输出张量形状会变成什么？逐项说明每个数字怎么变。</li>
+<li>为什么”一个 3×3×3 核作用在 [3,640,640] 上，输出是 1 张平面而不是 3 张”？</li>
+<li>8400 为什么”只跟 640 有关”，84 为什么”跟输入尺寸无关”？</li>
+<li>既然 ultralytics 能一行推理，为什么本项目脚本坚持用 cv2+numpy 手写前后处理？</li>
+</ol>
+<hr>
+<p><em>本文由一次真实答疑整理而成，记录在昇腾 Atlas 200I DK A2 上做 YOLOv8n ACL 推理时，从”看不懂一个输出张量”到”能逐维推导”的完整理解链。</em></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Ascend/" rel="tag"># Ascend</a>
+              <a href="/tags/ACL/" rel="tag"># ACL</a>
+              <a href="/tags/YOLO/" rel="tag"># YOLO</a>
+              <a href="/tags/CNN/" rel="tag"># CNN</a>
+              <a href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="tag"># 学习笔记</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/soc-zero-copy-smmu-mental-model/" rel="prev" title="从 DVPP 零拷贝到 SMMU——SoC 媒体流水线的心智模型">
+      <i class="fa fa-chevron-left"></i> 从 DVPP 零拷贝到 SMMU——SoC 媒体流水线的心智模型
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="gitalk-container"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#0-%E4%B8%BB%E7%BA%BF%E6%A6%82%E8%A7%88"><span class="nav-number">1.</span> <span class="nav-text">0. 主线概览</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E4%B8%BA%E4%BB%80%E4%B9%88-load-%E4%B9%8B%E5%89%8D%E5%BF%85%E9%A1%BB%E5%85%88-init%EF%BC%88ACL-%E7%9A%84%E8%B5%84%E6%BA%90%E5%B1%82%E7%BA%A7%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">1. 为什么 load 之前必须先 init（ACL 的资源层级）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88-init-%E5%BF%85%E9%A1%BB%E2%80%9D%E6%89%8B%E5%8A%A8%E5%A3%B0%E6%98%8E%E2%80%9D%EF%BC%8C%E4%B8%8D%E4%BC%9A%E8%87%AA%E5%8A%A8%E5%8F%91%E7%94%9F"><span class="nav-number">2.1.</span> <span class="nav-text">为什么 init 必须”手动声明”，不会自动发生</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-om-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8F%AA%E5%90%83%E4%B8%80%E5%BC%A0%E5%9B%BE%E5%83%8F-tensor"><span class="nav-number">3.</span> <span class="nav-text">2. .om 为什么只吃一张图像 tensor</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%8D%B7%E7%A7%AF%E4%B8%8E%E9%80%9A%E9%81%93%EF%BC%9A3-%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E5%87%A0%E5%8D%81%E4%B8%AA%E9%80%9A%E9%81%93"><span class="nav-number">4.</span> <span class="nav-text">3. 卷积与通道：3 怎么变成几十个通道</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E8%BE%93%E5%85%A5%E7%9A%84-3-%E5%B0%B1%E6%98%AF%E2%80%9D%E9%80%9A%E9%81%93%E2%80%9D"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 输入的 3 就是”通道”</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E5%94%AF%E4%B8%80%E8%A7%84%E5%88%99%EF%BC%9A%E8%BE%93%E5%87%BA%E9%80%9A%E9%81%93%E6%95%B0-%E8%BF%99%E4%B8%80%E5%B1%82%E6%94%BE%E4%BA%86%E5%A4%9A%E5%B0%91%E4%B8%AA%E5%8D%B7%E7%A7%AF%E6%A0%B8"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 唯一规则：输出通道数 &#x3D; 这一层放了多少个卷积核</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-Conv2d-in-32-out-64-k-3-%E5%90%84%E5%8F%82%E6%95%B0"><span class="nav-number">4.3.</span> <span class="nav-text">3.3 Conv2d(in&#x3D;32, out&#x3D;64, k&#x3D;3) 各参数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4-%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8F%AB-Conv2D%EF%BC%9A%E7%9C%8B%E6%BB%91%E5%8A%A8%E8%BD%B4%EF%BC%8C%E4%B8%8D%E7%9C%8B%E6%95%B0%E6%8D%AE%E7%BB%B4%E6%95%B0"><span class="nav-number">4.4.</span> <span class="nav-text">3.4 为什么叫 Conv2D：看滑动轴，不看数据维数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5-%E5%B0%BA%E5%AF%B8%E4%B8%8E%E9%80%9A%E9%81%93%E6%B2%BF-backbone-%E7%9A%84%E8%B5%B0%E5%8A%BF"><span class="nav-number">4.5.</span> <span class="nav-text">3.5 尺寸与通道沿 backbone 的走势</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Backbone-Neck-Head%EF%BC%9A%E7%BD%91%E7%BB%9C%E7%9A%84%E4%B8%89%E5%A4%A7%E5%9D%97"><span class="nav-number">5.</span> <span class="nav-text">4. Backbone &#x2F; Neck &#x2F; Head：网络的三大块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-anchor-free-%E4%B8%8E-P3-P4-P5"><span class="nav-number">6.</span> <span class="nav-text">5. anchor-free 与 P3&#x2F;P4&#x2F;P5</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-P3-P4-P5-%E7%89%B9%E5%BE%81%E9%87%91%E5%AD%97%E5%A1%94%EF%BC%88FPN%EF%BC%89"><span class="nav-number">6.1.</span> <span class="nav-text">5.1 P3&#x2F;P4&#x2F;P5 &#x3D; 特征金字塔（FPN）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-anchor-free-%E5%9C%A8%E5%8F%8D%E5%AF%B9%E4%BB%80%E4%B9%88"><span class="nav-number">6.2.</span> <span class="nav-text">5.2 anchor-free 在反对什么</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%A0%B8%E5%BF%83%E6%8E%A8%E5%AF%BC%EF%BC%9A84-%E5%92%8C-8400-%E6%80%8E%E4%B9%88%E4%BB%8E-3%C3%97640%C3%97640-%E7%AE%97%E5%87%BA%E6%9D%A5"><span class="nav-number">7.</span> <span class="nav-text">6. 核心推导：84 和 8400 怎么从 3×640×640 算出来</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%93%E8%AE%BA%E5%85%AC%E5%BC%8F"><span class="nav-number">7.1.</span> <span class="nav-text">结论公式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-1-8400-%E2%80%94%E2%80%94-%E7%BA%AF%E7%A9%BA%E9%97%B4%E5%B0%BA%E5%AF%B8%E7%9A%84%E4%B8%8B%E9%87%87%E6%A0%B7%E6%B5%81%E6%B0%B4"><span class="nav-number">7.2.</span> <span class="nav-text">6.1 8400 —— 纯空间尺寸的下采样流水</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-2-84-%E2%80%94%E2%80%94-%E6%AF%8F%E4%B8%AA%E6%A0%BC%E7%82%B9%E8%A6%81%E5%A1%AB%E5%87%A0%E4%B8%AA%E6%95%B0"><span class="nav-number">7.3.</span> <span class="nav-text">6.2 84 —— 每个格点要填几个数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#6-3-%E6%8B%BC%E6%88%90-1-84-8400"><span class="nav-number">7.4.</span> <span class="nav-text">6.3 拼成 [1, 84, 8400]</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-%E4%B8%80%E4%B8%AA%E6%A0%BC%E7%82%B9%E5%A6%82%E4%BD%95%E2%80%9D%E9%A2%84%E6%B5%8B%E4%B8%80%E4%B8%AA%E6%A1%86%E2%80%9D"><span class="nav-number">8.</span> <span class="nav-text">7. 一个格点如何”预测一个框”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E5%85%A8%E9%93%BE%E8%B7%AF%E4%B8%80%E5%9B%BE%E6%B5%81%EF%BC%88%E6%AF%8F%E4%B8%AA%E6%95%B0%E5%AD%97%E9%83%BD%E6%9C%89%E5%87%BA%E5%A4%84%EF%BC%89"><span class="nav-number">9.</span> <span class="nav-text">8. 全链路一图流（每个数字都有出处）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-%E6%9C%AF%E8%AF%AD%E9%80%9F%E6%9F%A5"><span class="nav-number">10.</span> <span class="nav-text">9. 术语速查</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-%E8%87%AA%E6%B5%8B%E9%97%AE%E9%A2%98"><span class="nav-number">11.</span> <span class="nav-text">10. 自测问题</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="OutFRid"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">OutFRid</p>
+  <div class="site-description" itemprop="description">用于个人复习、成果展示</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">28</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/OutFRid" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;OutFRid" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:xkxindong@gmail.com" title="E-Mail → mailto:xkxindong@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+
+      </div>
+        <div class="back-to-top motion-element">
+          <i class="fa fa-arrow-up"></i>
+          <span>0%</span>
+        </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">OutFRid</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://pisces.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.css">
+
+<script>
+NexT.utils.loadComments(document.querySelector('#gitalk-container'), () => {
+  NexT.utils.getScript('//cdn.jsdelivr.net/npm/gitalk@1/dist/gitalk.min.js', () => {
+    var gitalk = new Gitalk({
+      clientID    : 'Ov23liHDWzPOtGTlNZCC',
+      clientSecret: 'd0a1e5b426227547b7486b0197ca822014127487',
+      repo        : 'OutFRid.github.io',
+      owner       : 'OutFRid',
+      admin       : ['OutFRid'],
+      id          : '463b42cf183d9912be39f6a3a2958409',
+        language: '',
+      distractionFreeMode: true
+    });
+    gitalk.render('gitalk-container');
+  }, window.Gitalk);
+});
+</script>
+
+</body>
+</html>
